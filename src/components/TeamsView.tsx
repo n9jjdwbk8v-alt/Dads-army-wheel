@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
 import SpotlightCard from './reactbits/SpotlightCard';
 import { splitTeams, TEAM_LABEL, type Player, type Team, type Teams } from '../lib/teams';
+import { drawTeamsGraphic } from '../lib/teamGraphic';
 
 type TeamsViewProps = {
   present: Player[];
@@ -24,21 +25,55 @@ const idsKey = (players: Player[]) =>
 
 export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
+  const [drawn, setDrawn] = useState<{ key: string; blob: Blob; url: string } | null>(null);
   const hasTeams = teams.light.length + teams.dark.length > 0;
   const enough = present.length >= 2;
   // Teams go stale if someone was ticked in or out after the split.
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
+  const ready = hasTeams && !stale;
+  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}`;
+  // Only use a graphic drawn for the teams currently on screen.
+  const graphic = ready && drawn?.key === teamsKey ? drawn : null;
 
-  const share = async () => {
-    const text = shareText(teams);
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
+  useEffect(() => {
+    if (!ready) return;
+    let url = '';
+    let cancelled = false;
+    drawTeamsGraphic(teams).then(blob => {
+      if (cancelled) return;
+      url = URL.createObjectURL(blob);
+      setDrawn({ key: teamsKey, blob, url });
+    });
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [teams, teamsKey, ready]);
+
+  const download = () => {
+    if (!graphic) return;
+    const a = document.createElement('a');
+    a.href = graphic.url;
+    a.download = 'dads-army-teams.png';
+    a.click();
+  };
+
+  const shareImage = async () => {
+    if (!graphic) return;
+    const file = new File([graphic.blob], 'dads-army-teams.png', { type: 'image/png' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
         return;
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return;
       }
-    } catch {
-      // Share sheet dismissed — fall through to copying.
     }
+    download();
+  };
+
+  const copyText = async () => {
+    const text = shareText(teams);
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -69,9 +104,9 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
           >
             {hasTeams && !stale ? 'Reshuffle' : 'Split teams'}
           </StarBorder>
-          {hasTeams && !stale && (
-            <button className="btn btn--ghost" onClick={share}>
-              {copied ? 'Copied!' : 'Share teams'}
+          {ready && (
+            <button className="btn btn--primary" onClick={shareImage} disabled={!graphic}>
+              Send to WhatsApp
             </button>
           )}
         </div>
@@ -82,6 +117,21 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
         <div key={idsKey(teams.light)} className={stale ? 'teams teams--stale' : 'teams'}>
           <TeamCard team="light" players={teams.light} />
           <TeamCard team="dark" players={teams.dark} />
+        </div>
+      )}
+
+      {graphic && (
+        <div className="panel graphic">
+          <img src={graphic.url} alt="Lights vs Darks team graphic" className="graphic__img" />
+          <p className="muted small">Tip: on a phone you can also press and hold the picture to save or share it.</p>
+          <div className="split__actions">
+            <button className="btn btn--ghost" onClick={download}>
+              Download image
+            </button>
+            <button className="btn btn--ghost" onClick={copyText}>
+              {copied ? 'Copied!' : 'Copy as text'}
+            </button>
+          </div>
         </div>
       )}
     </section>

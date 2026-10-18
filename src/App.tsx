@@ -53,7 +53,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="foot">Saved on this device · Light vs Dark</footer>
+      <footer className="foot">Saved on this device · Lights vs Darks</footer>
     </ClickSpark>
   );
 }

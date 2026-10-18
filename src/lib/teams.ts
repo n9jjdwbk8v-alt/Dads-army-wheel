@@ -9,7 +9,7 @@ export type Team = 'light' | 'dark';
 
 export type Teams = { light: Player[]; dark: Player[] };
 
-export const TEAM_LABEL: Record<Team, string> = { light: 'Light', dark: 'Dark' };
+export const TEAM_LABEL: Record<Team, string> = { light: 'Lights', dark: 'Darks' };
 
 export const NO_TEAMS: Teams = { light: [], dark: [] };
 
