@@ -10,12 +10,13 @@
   --muted: #5b7366;
   --line: #cfe7d8;
   --font-display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-stencil: 'Black Ops One', 'Barlow Condensed', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
   color-scheme: light;
   font-family: var(--font-body);
   color: var(--ink);
-  background: var(--green-50);
+  background: #0c120a;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -34,9 +35,7 @@ body,
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 500px at 50% -200px, rgba(46, 158, 91, 0.12), transparent),
-    var(--green-50);
+  background: #0c120a;
 }
 
 button {

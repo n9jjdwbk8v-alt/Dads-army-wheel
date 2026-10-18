@@ -1,54 +1,54 @@
 .spark-root {
   min-height: 100vh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
   display: flex;
   flex-direction: column;
 }
 
 /* ---------- Header ---------- */
 
+.bg-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: rgba(6, 10, 5, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.bg-picker__label {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #b8c9a0;
+}
+
 .hero {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(160deg, var(--green-800), var(--green-900));
-  color: #fff;
-  padding: 2.25rem 1rem 2.75rem;
-  text-align: center;
-  border-bottom: 6px solid #fff;
-  box-shadow: 0 6px 0 var(--green-600);
-}
-
-.hero__snow {
-  position: absolute !important;
-  inset: 0;
-  opacity: 0.55;
-  pointer-events: none;
-}
-
-.hero__content {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 1.5rem 1rem 0.5rem;
+  text-align: center;
 }
 
-.hero__title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(3rem, 13vw, 5.5rem);
-  line-height: 0.95;
-  letter-spacing: 0.06em;
-  color: #fff;
+.hero__logo {
+  display: block;
+  width: auto;
+  height: clamp(190px, 46vw, 280px);
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 2px rgba(255, 255, 255, 0.35));
 }
 
 .hero__sub {
   display: inline-block;
-  margin-top: 0.4rem;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(1.1rem, 4.5vw, 1.5rem);
-  letter-spacing: 0.22em;
+  margin-top: 0.6rem;
+  font-family: var(--font-stencil);
+  font-size: clamp(1.15rem, 4.8vw, 1.6rem);
+  letter-spacing: 0.24em;
   text-transform: uppercase;
 }
 
@@ -115,7 +115,7 @@
 .foot {
   text-align: center;
   font-size: 0.8rem;
-  color: var(--muted);
+  color: #b8c9a0;
   padding: 0 1rem 1.5rem;
 }
 

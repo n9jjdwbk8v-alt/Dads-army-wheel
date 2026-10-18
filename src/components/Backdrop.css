@@ -1,0 +1,43 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: #0c120a;
+}
+
+.backdrop__camo {
+  position: absolute;
+  inset: 0;
+  background-repeat: repeat;
+}
+
+.backdrop__camo--woodland {
+  background-size: 420px 420px;
+  filter: saturate(0.9);
+}
+
+.backdrop__camo--digital {
+  background-size: 480px 480px;
+  image-rendering: pixelated;
+}
+
+.backdrop__topo {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 80% at 50% 0%, #1c2615, #0c120a 70%);
+}
+
+/* Darkens the edges so the logo and panels stay the focus. */
+.backdrop__shade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(130% 90% at 50% 20%, transparent 30%, rgba(5, 8, 4, 0.7));
+}
+
+.backdrop--woodland .backdrop__shade,
+.backdrop--digital .backdrop__shade {
+  background:
+    linear-gradient(rgba(8, 12, 6, 0.35), rgba(8, 12, 6, 0.35)),
+    radial-gradient(130% 90% at 50% 20%, transparent 30%, rgba(5, 8, 4, 0.75));
+}
