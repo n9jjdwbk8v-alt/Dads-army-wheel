@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import ScrubField from './reactbits/ScrubField';
 import SpringCheck from './reactbits/SpringCheck';
-import type { Player } from '../lib/teams';
+import { isGoalie, type Player } from '../lib/teams';
 
 type RosterProps = {
   players: Player[];
@@ -48,7 +48,7 @@ export default function Roster({ players, setPlayers }: RosterProps) {
         <ScrubField
           label="Skill"
           value={skill}
-          min={1}
+          min={0}
           max={10}
           step={1}
           onChange={setSkill}
@@ -86,13 +86,18 @@ export default function Roster({ players, setPlayers }: RosterProps) {
       )}
 
       {players.length === 0 ? (
-        <p className="empty">No players yet — add the squad above. Rate each one 1 (learning to skate) to 10 (ex-pro).</p>
+        <p className="empty">No players yet — add the squad above. Rate each one 1 (learning to skate) to 10 (ex-pro), or 0 for a goalie.</p>
       ) : (
         <ul className="roster">
           {visible.map(p => (
             <li key={p.id} className={p.here ? 'roster__row' : 'roster__row roster__row--away'}>
               <SpringCheck
-                label={p.name}
+                label={
+                  <>
+                    {p.name}
+                    {isGoalie(p) && <span className="goalie-tag" title="Goalie">G</span>}
+                  </>
+                }
                 checked={p.here}
                 onChange={here => update(p.id, { here })}
                 strike="none"
@@ -107,7 +112,7 @@ export default function Roster({ players, setPlayers }: RosterProps) {
               <ScrubField
                 label="Skill"
                 value={p.skill}
-                min={1}
+                min={0}
                 max={10}
                 step={1}
                 size="sm"

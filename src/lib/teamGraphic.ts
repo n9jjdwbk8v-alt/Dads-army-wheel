@@ -1,4 +1,4 @@
-import type { Teams } from './teams';
+import { isGoalie, type Teams } from './teams';
 
 const W = 1080;
 const H = 1350;
@@ -137,6 +137,21 @@ export const drawTeamsGraphic = async (teams: Teams, date = new Date()): Promise
   ctx.letterSpacing = '0px';
   ctx.font = `500 ${size}px ${BODY}`;
 
+  // Lime "G" disc marking a goalie; returns the horizontal space it takes up.
+  const badgeR = lh * 0.27;
+  const goalieBadge = (cx: number, y: number) => {
+    ctx.fillStyle = C.lime;
+    ctx.beginPath();
+    ctx.arc(cx, y, badgeR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = C.green;
+    ctx.textAlign = 'center';
+    ctx.font = `800 ${Math.round(badgeR * 1.3)}px ${DISPLAY}`;
+    ctx.fillText('G', cx, y + 1);
+    ctx.font = `500 ${size}px ${BODY}`;
+    return badgeR * 2 + 14;
+  };
+
   teams.light.forEach((p, i) => {
     const y = top + lh * i + lh / 2;
     const edge = Math.min(slashX(y - lh / 2), slashX(y + lh / 2)) - GAP;
@@ -144,9 +159,10 @@ export const drawTeamsGraphic = async (teams: Teams, date = new Date()): Promise
     ctx.beginPath();
     ctx.roundRect(PAD - 18, y - lh * 0.42, edge - PAD + 18, lh * 0.84, 12);
     ctx.fill();
+    const indent = isGoalie(p) ? goalieBadge(PAD + badgeR, y) : 0;
     ctx.fillStyle = C.green;
     ctx.textAlign = 'left';
-    ctx.fillText(fit(ctx, p.name, edge - PAD - 12), PAD, y + 1);
+    ctx.fillText(fit(ctx, p.name, edge - PAD - 12 - indent), PAD + indent, y + 1);
   });
 
   teams.dark.forEach((p, i) => {
@@ -156,9 +172,10 @@ export const drawTeamsGraphic = async (teams: Teams, date = new Date()): Promise
     ctx.beginPath();
     ctx.roundRect(edge, y - lh * 0.42, W - PAD + 18 - edge, lh * 0.84, 12);
     ctx.fill();
+    const indent = isGoalie(p) ? goalieBadge(W - PAD - badgeR, y) : 0;
     ctx.fillStyle = C.white;
     ctx.textAlign = 'right';
-    ctx.fillText(fit(ctx, p.name, W - PAD - edge - 12), W - PAD, y + 1);
+    ctx.fillText(fit(ctx, p.name, W - PAD - edge - 12 - indent), W - PAD - indent, y + 1);
   });
 
   return new Promise((resolve, reject) =>

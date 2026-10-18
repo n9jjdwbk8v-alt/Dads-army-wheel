@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
 import SpotlightCard from './reactbits/SpotlightCard';
-import { splitTeams, TEAM_LABEL, type Player, type Team, type Teams } from '../lib/teams';
+import { isGoalie, splitTeams, TEAM_LABEL, type Player, type Team, type Teams } from '../lib/teams';
 import { drawTeamsGraphic } from '../lib/teamGraphic';
 
 type TeamsViewProps = {
@@ -13,7 +13,7 @@ type TeamsViewProps = {
 const shareText = (t: Teams) => {
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const line = (team: Team, players: Player[]) =>
-    `${team === 'light' ? '⚪' : '🟢'} ${TEAM_LABEL[team].toUpperCase()} (${players.length}): ${players.map(p => p.name).join(', ')}`;
+    `${team === 'light' ? '⚪' : '🟢'} ${TEAM_LABEL[team].toUpperCase()} (${players.length}): ${players.map(p => (isGoalie(p) ? `${p.name} (G)` : p.name)).join(', ')}`;
   return `🏒 Dads Army — ${date}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
 };
 
@@ -89,7 +89,7 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
         <p className="muted">
           {present.length} player{present.length === 1 ? '' : 's'} here tonight.{' '}
           {enough
-            ? 'Teams are split as evenly as possible on skill.'
+            ? 'Goalies (skill 0) are shared one per team, then skaters are split as evenly as possible on skill.'
             : 'Tick at least 2 players on the Roster tab.'}
         </p>
         <div className="split__actions">
@@ -158,7 +158,14 @@ function TeamCard({ team, players }: { team: Team; players: Player[] }) {
       </header>
       <ol className="team__list">
         {players.map(p => (
-          <li key={p.id}>{p.name}</li>
+          <li key={p.id}>
+            {p.name}
+            {isGoalie(p) && (
+              <span className="goalie-tag" title="Goalie">
+                G
+              </span>
+            )}
+          </li>
         ))}
       </ol>
     </SpotlightCard>

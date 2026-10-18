@@ -13,6 +13,9 @@ export const TEAM_LABEL: Record<Team, string> = { light: 'Lights', dark: 'Darks'
 
 export const NO_TEAMS: Teams = { light: [], dark: [] };
 
+/** A skill of 0 marks a goalie. */
+export const isGoalie = (p: Player) => p.skill === 0;
+
 const random = () => {
   const buf = new Uint32Array(1);
   crypto.getRandomValues(buf);
@@ -20,12 +23,12 @@ const random = () => {
 };
 
 /**
- * Splits players into two teams of equal size (or one apart) whose skill totals are as close as possible.
- * When several splits are equally balanced, one is chosen uniformly at random, so splitting again reshuffles.
+ * Splits players into two groups — the first of floor(n/2), the second the rest — whose skill totals are as
+ * close as possible. When several splits are equally balanced, one is chosen uniformly at random.
  */
-export const splitTeams = (players: Player[]): Teams => {
+const balancedSplit = (players: Player[]): [Player[], Player[]] => {
   const n = players.length;
-  if (!n) return NO_TEAMS;
+  if (!n) return [[], []];
   const k = Math.floor(n / 2);
   const total = players.reduce((sum, p) => sum + p.skill, 0);
 
@@ -78,10 +81,24 @@ export const splitTeams = (players: Player[]): Teams => {
     }
   }
 
-  const a = players.filter(p => chosen.has(p.id));
-  const b = players.filter(p => !chosen.has(p.id));
-  const byName = (x: Player, y: Player) => x.name.localeCompare(y.name);
-  a.sort(byName);
-  b.sort(byName);
+  return [players.filter(p => chosen.has(p.id)), players.filter(p => !chosen.has(p.id))];
+};
+
+/**
+ * Splits players into two teams of equal size (or one apart). Goalies are shared out first, one per team where
+ * possible, and skaters are then balanced on skill. Splitting again reshuffles among equally fair line-ups.
+ */
+export const splitTeams = (players: Player[]): Teams => {
+  const goalies = players.filter(isGoalie);
+  const [a, b] = balancedSplit(players.filter(p => !isGoalie(p)));
+  // Shuffle goalies and alternate them between sides. With an odd number, the extra goalie goes to the side
+  // with fewer skaters (a, when skaters are odd) so head counts stay even; otherwise it's a coin flip.
+  const shuffled = goalies.map(g => ({ g, r: random() })).sort((x, y) => x.r - y.r).map(x => x.g);
+  const aFirst = a.length < b.length || (a.length === b.length && random() < 0.5);
+  shuffled.forEach((g, i) => ((i % 2 === 0) === aFirst ? a : b).push(g));
+
+  const order = (x: Player, y: Player) => Number(isGoalie(y)) - Number(isGoalie(x)) || x.name.localeCompare(y.name);
+  a.sort(order);
+  b.sort(order);
   return random() < 0.5 ? { light: a, dark: b } : { light: b, dark: a };
 };
