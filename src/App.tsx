@@ -5,18 +5,17 @@ import ShinyText from './components/reactbits/ShinyText';
 import RubberSegment from './components/reactbits/RubberSegment';
 import ClickSpark from './components/reactbits/ClickSpark';
 import Roster from './components/Roster';
-import Draft from './components/Draft';
-import { EMPTY_DRAFT, type DraftState, type Player } from './lib/draft';
+import TeamsView from './components/TeamsView';
+import { NO_TEAMS, type Player, type Teams } from './lib/teams';
 import { usePersistentState } from './lib/storage';
 import './App.css';
 
-type Tab = 'roster' | 'draft';
+type Tab = 'roster' | 'teams';
 
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);
-  const [draft, setDraft] = usePersistentState<DraftState>('dads-army:draft', EMPTY_DRAFT);
-  const [showSkill, setShowSkill] = usePersistentState('dads-army:show-skill', true);
-  const [tab, setTab] = useState<Tab>(() => (draft.tiers.length ? 'draft' : 'roster'));
+  const [teams, setTeams] = usePersistentState<Teams>('dads-army:teams', NO_TEAMS);
+  const [tab, setTab] = useState<Tab>(() => (teams.light.length ? 'teams' : 'roster'));
 
   const present = players.filter(p => p.here);
 
@@ -26,7 +25,7 @@ export default function App() {
         <PixelSnow className="hero__snow" color="#ffffff" density={0.35} speed={0.6} variant="snowflake" />
         <div className="hero__content">
           <SplitText text="DADS ARMY" tag="h1" className="hero__title" effect="rise" splitType="chars" trigger="load" />
-          <ShinyText text="Team Picker Wheel" color="#cfeedd" shineColor="#ffffff" speed={3} className="hero__sub" />
+          <ShinyText text="Team Picker" color="#cfeedd" shineColor="#ffffff" speed={3} className="hero__sub" />
         </div>
       </header>
 
@@ -35,7 +34,7 @@ export default function App() {
           <RubberSegment
             items={[
               { value: 'roster', label: `Roster (${present.length}/${players.length})` },
-              { value: 'draft', label: 'Pick teams' }
+              { value: 'teams', label: 'Teams' }
             ]}
             value={tab}
             onChange={v => setTab(v as Tab)}
@@ -50,13 +49,7 @@ export default function App() {
         {tab === 'roster' ? (
           <Roster players={players} setPlayers={setPlayers} />
         ) : (
-          <Draft
-            present={present}
-            draft={draft}
-            setDraft={setDraft}
-            showSkill={showSkill}
-            setShowSkill={setShowSkill}
-          />
+          <TeamsView present={present} teams={teams} setTeams={setTeams} />
         )}
       </main>
 

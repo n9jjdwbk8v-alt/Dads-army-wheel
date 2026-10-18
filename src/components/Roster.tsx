@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import ScrubField from './reactbits/ScrubField';
 import SpringCheck from './reactbits/SpringCheck';
-import type { Player } from '../lib/draft';
+import type { Player } from '../lib/teams';
 
 type RosterProps = {
   players: Player[];

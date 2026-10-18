@@ -1,16 +1,16 @@
-# Dads Army · Team Picker Wheel
+# Dads Army · Team Picker
 
-A spinning-wheel team picker for the Dads Army ice hockey team. It splits whoever turns up into **Light** vs **Dark**, balanced by skill.
+A team picker for the Dads Army ice hockey team. It instantly splits whoever turns up into **Light** vs **Dark**, as evenly as possible on skill.
 
 ## How it works
 
 1. **Roster** – add players and rate each 1–10 (drag the skill chip or tap it to type). Tick who's here tonight.
-2. **Pick teams** – players who are ticked in are sorted by skill into tiers of four. For each tier the wheel spins to pick a player, and picks alternate snake-style (A B B A), with the team that's behind on total skill picking first. Each tier ends up two-and-two, so similar players land on opposite benches.
-3. When the draft is done the app suggests the one swap that would narrow any remaining gap, and **Share teams** sends the line-ups to the group chat (or copies them).
+2. **Teams** – press **Split teams**. Team sizes are kept equal (one apart for an odd number), and among all such splits the app finds the one with the closest skill totals (exhaustive search via dynamic programming, `src/lib/teams.ts`). When several splits are equally balanced it picks one at random, so **Reshuffle** gives a different, equally fair line-up.
+3. **Share teams** sends the line-ups to the group chat (or copies them). Ratings and totals are never shown on the teams screen.
 
-Players and the last draft are saved in the browser (localStorage) on that device. There's no backend.
+Players and the last split are saved in the browser (localStorage) on that device. There's no backend.
 
-UI components come from [React Bits](https://reactbits.dev) (`src/components/reactbits/`): PixelSnow, SplitText, ShinyText, RubberSegment, SpringCheck, ScrubField, StarBorder, SpotlightCard, CountUp and ClickSpark. The wheel itself is a custom SVG (`src/components/Wheel.tsx`).
+UI components come from [React Bits](https://reactbits.dev) (`src/components/reactbits/`): PixelSnow, SplitText, ShinyText, RubberSegment, SpringCheck, ScrubField, StarBorder, SpotlightCard and ClickSpark.
 
 ## Develop
 
