@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
 import SpotlightCard from './reactbits/SpotlightCard';
 import { isGoalie, splitTeams, TEAM_LABEL, type Player, type Team, type Teams } from '../lib/teams';
-import { drawTeamsGraphic } from '../lib/teamGraphic';
+import RubberSegment from './reactbits/RubberSegment';
+import { drawTeamsGraphic, GRAPHIC_BACKGROUNDS, type GraphicBackground } from '../lib/teamGraphic';
+import { usePersistentState } from '../lib/storage';
 
 type TeamsViewProps = {
   present: Player[];
@@ -26,29 +28,32 @@ const idsKey = (players: Player[]) =>
 export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
   const [drawn, setDrawn] = useState<{ key: string; blob: Blob; url: string } | null>(null);
+  const [background, setBackground] = usePersistentState<GraphicBackground>('dads-army:graphic-bg', 'woodland');
   const hasTeams = teams.light.length + teams.dark.length > 0;
   const enough = present.length >= 2;
   // Teams go stale if someone was ticked in or out after the split.
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
   const ready = hasTeams && !stale;
-  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}`;
-  // Only use a graphic drawn for the teams currently on screen.
+  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}|${background}`;
+  // Only share a graphic drawn for the teams and background currently chosen; an older one is just a placeholder.
   const graphic = ready && drawn?.key === teamsKey ? drawn : null;
+
+  const urlRef = useRef('');
+  useEffect(() => () => URL.revokeObjectURL(urlRef.current), []);
 
   useEffect(() => {
     if (!ready) return;
-    let url = '';
     let cancelled = false;
-    drawTeamsGraphic(teams).then(blob => {
+    drawTeamsGraphic(teams, background).then(blob => {
       if (cancelled) return;
-      url = URL.createObjectURL(blob);
-      setDrawn({ key: teamsKey, blob, url });
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = URL.createObjectURL(blob);
+      setDrawn({ key: teamsKey, blob, url: urlRef.current });
     });
     return () => {
       cancelled = true;
-      if (url) URL.revokeObjectURL(url);
     };
-  }, [teams, teamsKey, ready]);
+  }, [teams, background, teamsKey, ready]);
 
   const download = () => {
     if (!graphic) return;
@@ -104,11 +109,6 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
           >
             {hasTeams && !stale ? 'Reshuffle' : 'Split teams'}
           </StarBorder>
-          {ready && (
-            <button className="btn btn--primary" onClick={shareImage} disabled={!graphic}>
-              Send to WhatsApp
-            </button>
-          )}
         </div>
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
       </div>
@@ -120,12 +120,31 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
         </div>
       )}
 
-      {graphic && (
+      {ready && drawn && (
         <div className="panel graphic">
-          <img src={graphic.url} alt="Lights vs Darks team graphic" className="graphic__img" />
+          <p className="graphic__label">Picture background</p>
+          <RubberSegment
+            items={GRAPHIC_BACKGROUNDS}
+            value={background}
+            onChange={v => setBackground(v as GraphicBackground)}
+            size="sm"
+            trackColor="#e3f3e9"
+            thumbColor="#0f5132"
+            textColor="#0f5132"
+            activeTextColor="#ffffff"
+            aria-label="Picture background"
+          />
+          <img
+            src={drawn.url}
+            alt="Lights vs Darks team graphic"
+            className={graphic ? 'graphic__img' : 'graphic__img graphic__img--updating'}
+          />
+          <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!graphic}>
+            Send to WhatsApp
+          </button>
           <p className="muted small">Tip: on a phone you can also press and hold the picture to save or share it.</p>
           <div className="split__actions">
-            <button className="btn btn--ghost" onClick={download}>
+            <button className="btn btn--ghost" onClick={download} disabled={!graphic}>
               Download image
             </button>
             <button className="btn btn--ghost" onClick={copyText}>

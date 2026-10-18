@@ -3,7 +3,6 @@ import ShinyText from './components/reactbits/ShinyText';
 import RubberSegment from './components/reactbits/RubberSegment';
 import ClickSpark from './components/reactbits/ClickSpark';
 import Backdrop from './components/Backdrop';
-import { BACKDROPS, type BackdropKind } from './lib/backdrops';
 import Roster from './components/Roster';
 import TeamsView from './components/TeamsView';
 import { NO_TEAMS, type Player, type Teams } from './lib/teams';
@@ -12,43 +11,16 @@ import './App.css';
 
 type Tab = 'roster' | 'teams';
 
-const backdropFromUrl = () => {
-  const bg = new URLSearchParams(location.search).get('bg');
-  return BACKDROPS.find(b => b.value === bg)?.value;
-};
-
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);
   const [teams, setTeams] = usePersistentState<Teams>('dads-army:teams', NO_TEAMS);
-  const [savedBackdrop, setBackdrop] = usePersistentState<BackdropKind>('dads-army:backdrop', 'woodland');
   const [tab, setTab] = useState<Tab>(() => (teams.light.length ? 'teams' : 'roster'));
-  const [urlBackdrop, setUrlBackdrop] = useState(backdropFromUrl);
-  const backdrop = urlBackdrop ?? savedBackdrop;
 
   const present = players.filter(p => p.here);
 
   return (
     <ClickSpark sparkColor={['#7bd64a', '#c8e66b', '#ffffff']} sparkCount={10} sparkRadius={22} className="spark-root">
-      <Backdrop kind={backdrop} />
-
-      {/* Temporary: lets the team compare background mock-ups before one is chosen. */}
-      <div className="bg-picker">
-        <span className="bg-picker__label">Background</span>
-        <RubberSegment
-          items={BACKDROPS}
-          value={backdrop}
-          onChange={v => {
-            setUrlBackdrop(undefined);
-            setBackdrop(v as BackdropKind);
-          }}
-          size="sm"
-          trackColor="rgba(0, 0, 0, 0.45)"
-          thumbColor="#7bd64a"
-          textColor="#d9e8c4"
-          activeTextColor="#10180c"
-          aria-label="Background mock-up"
-        />
-      </div>
+      <Backdrop />
 
       <header className="hero">
         <img className="hero__logo" src="./logo.png" alt="Dads Army" width={467} height={520} />
