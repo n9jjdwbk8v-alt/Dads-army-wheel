@@ -168,30 +168,6 @@
   color: #c8e66b;
 }
 
-/* A choice inside a white panel: two patches, dark labels. */
-.patches--choice {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 220px;
-  gap: 1.25rem;
-}
-
-.patches--choice .patch__shield {
-  filter: drop-shadow(0 3px 4px rgba(15, 81, 50, 0.3));
-}
-
-.patches--choice .patch--on .patch__shield {
-  filter: drop-shadow(0 0 8px rgba(156, 194, 63, 0.6)) drop-shadow(0 3px 4px rgba(15, 81, 50, 0.3));
-}
-
-.patches--choice .patch__label {
-  color: var(--muted);
-  text-shadow: none;
-}
-
-.patches--choice .patch--on .patch__label {
-  color: var(--green-800);
-}
-
 @media (max-width: 359px) {
   .patch__shield {
     width: 52px;
@@ -704,8 +680,66 @@
   justify-items: stretch;
 }
 
-.gameday__details > .patches {
+/* ---------- Game or scrimmage: rubber stamps ---------- */
+
+.stamps {
   justify-self: center;
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.6rem, 3vw, 1rem);
+  padding: 0.35rem 0;
+}
+
+.stamp {
+  padding: 0.55rem clamp(0.65rem, 3vw, 1rem);
+  border: 3px solid currentColor;
+  border-radius: 6px;
+  background: none;
+  color: #c7cbc2;
+  font-family: var(--font-stencil);
+  font-size: clamp(0.95rem, 4.6vw, 1.3rem);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-transform: uppercase;
+  transform: rotate(-3deg);
+  cursor: pointer;
+  transition: color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stamp + .stamp {
+  transform: rotate(2deg);
+}
+
+.stamp:hover:not(.stamp--on) {
+  color: #a9afa2;
+}
+
+.stamp:focus-visible {
+  outline: 2px solid var(--green-600);
+  outline-offset: 4px;
+}
+
+/* Inked: a double red ring, and a thump as it lands. */
+.stamp--on {
+  color: #b42318;
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    inset 0 0 0 4px #b42318;
+  animation: stamp-down 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+
+@keyframes stamp-down {
+  from {
+    opacity: 0.2;
+    scale: 1.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stamp--on {
+    animation: none;
+  }
 }
 
 .field {

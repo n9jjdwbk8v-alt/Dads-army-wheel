@@ -12,32 +12,18 @@ type PatchTabsProps<T extends string> = {
   tabs: PatchTab<T>[];
   value: T;
   onChange: (value: T) => void;
-  /** Tabs switch the page's section; a choice picks an option inside a panel (dark labels for a white panel). */
-  mode?: 'tabs' | 'choice';
   'aria-label': string;
 };
 
-/** Options drawn as shield-shaped camo patches with a stencilled label: the section tabs, or a choice in a panel. */
-export default function PatchTabs<T extends string>({
-  tabs,
-  value,
-  onChange,
-  mode = 'tabs',
-  'aria-label': label
-}: PatchTabsProps<T>) {
-  const tabsMode = mode === 'tabs';
+/** The section tabs, drawn as shield-shaped camo patches with a stencilled label. */
+export default function PatchTabs<T extends string>({ tabs, value, onChange, 'aria-label': label }: PatchTabsProps<T>) {
   return (
-    <div
-      className={tabsMode ? 'patches' : 'patches patches--choice'}
-      role={tabsMode ? 'tablist' : 'radiogroup'}
-      aria-label={label}
-    >
+    <div className="patches" role="tablist" aria-label={label}>
       {tabs.map(t => (
         <button
           key={t.value}
-          role={tabsMode ? 'tab' : 'radio'}
-          aria-selected={tabsMode ? t.value === value : undefined}
-          aria-checked={tabsMode ? undefined : t.value === value}
+          role="tab"
+          aria-selected={t.value === value}
           className={t.value === value ? 'patch patch--on' : 'patch'}
           aria-label={t.badge ? `${t.label}, ${t.badge.spoken}` : undefined}
           onClick={() => onChange(t.value)}
@@ -118,24 +104,3 @@ export function GameDayIcon() {
   );
 }
 
-/** A trophy, for a proper game. */
-export function GameIcon() {
-  return icon(
-    <>
-      <path d="M8 4h8v5a4 4 0 0 1-8 0V4z" />
-      <path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4" />
-      <path d="M12 13v4M8.5 20h7M10 17h4" />
-    </>
-  );
-}
-
-/** A whistle, for a scrimmage. */
-export function ScrimmageIcon() {
-  return icon(
-    <>
-      <path d="M15.2 12.5A6.5 6.5 0 1 1 9 7h12.5v5.5z" />
-      <circle cx="9" cy="13.5" r="1.6" fill="currentColor" stroke="none" />
-      <path d="M13 7V4.5" />
-    </>
-  );
-}

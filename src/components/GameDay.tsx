@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react';
-import PatchTabs, { GameIcon, ScrimmageIcon } from './PatchTabs';
 import SpringCheck from './reactbits/SpringCheck';
 import { useRendered } from './useRendered';
 import type { GameDayState } from '../lib/gameDay';
@@ -38,6 +37,12 @@ const POSITIONS: { value: Position; label: string; title: string }[] = [
   { value: 'F', label: 'F', title: 'Forward' },
   { value: 'D', label: 'D', title: 'Defence' },
   { value: 'G', label: 'G', title: 'Goalie' }
+];
+
+/** Game or scrimmage, picked with two rubber stamps. */
+const KINDS: { value: SheetKind; label: string }[] = [
+  { value: 'game', label: 'Game' },
+  { value: 'scrimmage', label: 'Scrimmage' }
 ];
 
 const textHeader = (details: GameDetails) => {
@@ -130,16 +135,19 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
   return (
     <section className="gameday">
       <div className="panel gameday__details">
-        <PatchTabs<SheetKind>
-          mode="choice"
-          tabs={[
-            { value: 'game', label: 'Game', icon: <GameIcon /> },
-            { value: 'scrimmage', label: 'Scrimmage', icon: <ScrimmageIcon /> }
-          ]}
-          value={gameDay.kind}
-          onChange={kind => set({ kind })}
-          aria-label="Game or scrimmage"
-        />
+        <div className="stamps" role="radiogroup" aria-label="Game or scrimmage">
+          {KINDS.map(k => (
+            <button
+              key={k.value}
+              role="radio"
+              aria-checked={gameDay.kind === k.value}
+              className={gameDay.kind === k.value ? 'stamp stamp--on' : 'stamp'}
+              onClick={() => set({ kind: k.value })}
+            >
+              {k.label}
+            </button>
+          ))}
+        </div>
         <label className="field">
           <span>{gameDay.kind === 'game' ? 'Opponent' : 'Name'}</span>
           <input
