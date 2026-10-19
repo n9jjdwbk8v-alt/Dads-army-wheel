@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import ShinyText from './components/reactbits/ShinyText';
-import RubberSegment from './components/reactbits/RubberSegment';
 import ClickSpark from './components/reactbits/ClickSpark';
 import Backdrop from './components/Backdrop';
+import PatchTabs, { FeesIcon, GameDayIcon, RosterIcon, TeamsIcon } from './components/PatchTabs';
 import Roster from './components/Roster';
 import Backup from './components/Backup';
 import TeamsView from './components/TeamsView';
@@ -52,24 +52,18 @@ export default function App() {
       </header>
 
       <main className="main">
-        <nav className="tabs">
-          <RubberSegment
-            items={[
-              { value: 'roster', label: `Roster (${present.length}/${players.length})` },
-              { value: 'teams', label: 'Teams' },
-              { value: 'fees', label: 'Fees' },
-              { value: 'gameday', label: 'Game day' }
+        <div className="tabs">
+          <PatchTabs<Tab>
+            tabs={[
+              { value: 'roster', label: 'Roster', icon: <RosterIcon />, badge: players.length ? { text: String(present.length), spoken: `${present.length} here tonight` } : undefined },
+              { value: 'teams', label: 'Teams', icon: <TeamsIcon /> },
+              { value: 'fees', label: 'Fees', icon: <FeesIcon /> },
+              { value: 'gameday', label: 'Game day', icon: <GameDayIcon /> }
             ]}
             value={tab}
-            onChange={v => setTab(v as Tab)}
-            trackColor="#e3f3e9"
-            thumbColor="#0f5132"
-            textColor="#0f5132"
-            activeTextColor="#ffffff"
-            aria-label="Section"
-            equalSlots={false}
+            onChange={setTab}
           />
-        </nav>
+        </div>
 
         {tab === 'roster' && (
           <Roster players={players} setPlayers={setPlayers}>

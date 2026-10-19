@@ -48,6 +48,138 @@
   margin-bottom: 1.25rem;
 }
 
+/* ---------- Section tabs: camo patches ---------- */
+
+.patches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.patch {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #d9e8c4;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.patch__shield {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 62px;
+  color: #d9e8c4;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+  transition:
+    transform 0.15s,
+    color 0.2s;
+}
+
+/* Outer ring and stitched twill inside it, both cut to the shield shape. */
+.patch__shield::before,
+.patch__shield::after {
+  content: '';
+  position: absolute;
+  clip-path: polygon(50% 0, 100% 18%, 100% 70%, 50% 100%, 0 70%, 0 18%);
+  transition: background 0.2s;
+}
+
+.patch__shield::before {
+  inset: 0;
+  background: #3b4a2a;
+}
+
+.patch__shield::after {
+  inset: 4px;
+  background: repeating-linear-gradient(45deg, #4a5c34 0 6px, #43552f 6px 12px);
+}
+
+.patch__icon {
+  position: relative;
+  z-index: 1;
+}
+
+.patch__badge {
+  position: absolute;
+  z-index: 2;
+  top: -4px;
+  right: -8px;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #c8e66b;
+  color: #12180d;
+  font: 700 11px/1.3 var(--font-body);
+  text-align: center;
+  box-shadow: 0 0 0 2px #12180d;
+}
+
+.patch__label {
+  max-width: 100%;
+  font-family: 'Stardos Stencil', var(--font-stencil);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-shadow: 0 1px 2px #000;
+  transition: color 0.2s;
+}
+
+.patch:active .patch__shield {
+  transform: scale(0.94);
+}
+
+.patch:focus-visible {
+  outline: 2px solid #c8e66b;
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.patch--on .patch__shield {
+  color: #12180d;
+  filter: drop-shadow(0 0 10px rgba(200, 230, 107, 0.45)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+}
+
+.patch--on .patch__shield::before {
+  background: #c8e66b;
+}
+
+.patch--on .patch__shield::after {
+  background: repeating-linear-gradient(45deg, #a8cc48 0 6px, #9cc23f 6px 12px);
+}
+
+.patch--on .patch__badge {
+  background: #12180d;
+  color: #c8e66b;
+  box-shadow: 0 0 0 2px #c8e66b;
+}
+
+.patch--on .patch__label {
+  color: #c8e66b;
+}
+
+@media (max-width: 359px) {
+  .patch__shield {
+    width: 52px;
+    height: 56px;
+  }
+
+  .patch__label {
+    font-size: 11px;
+    letter-spacing: 0.04em;
+  }
+}
+
 .panel {
   background: #fff;
   border: 1px solid var(--line);
@@ -971,14 +1103,6 @@
 .money-input .text-input {
   width: 100%;
   padding-left: 1.8rem;
-}
-
-/* Four tabs, each as wide as its label: tighten them on phones so they fit with a two-digit roster count. */
-@media (max-width: 420px) {
-  .tabs .rubber-segment {
-    --rs-pad: 9px !important;
-    --rs-font: 12.5px !important;
-  }
 }
 
 /* Very narrow phones: slightly smaller names and position buttons so long names have room. */
