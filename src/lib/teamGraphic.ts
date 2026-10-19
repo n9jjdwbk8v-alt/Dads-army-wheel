@@ -358,3 +358,39 @@ export const makeTeamsGif = async (teams: Teams, design: GraphicDesign, date = n
   gif.finish();
   return new Blob([gif.bytes()], { type: 'image/gif' });
 };
+
+/**
+ * Plays an animated design on `canvas` in real time, then calls `onDone` once the finished picture has shown for
+ * a moment. Returns a function that stops playback early.
+ */
+export const playTeamsAnimation = async (
+  canvas: HTMLCanvasElement,
+  teams: Teams,
+  design: GraphicDesign,
+  onDone: () => void,
+  date = new Date()
+): Promise<() => void> => {
+  const assets = await prepare(design);
+  canvas.width = Math.round(W * GIF_SCALE);
+  canvas.height = Math.round(H * GIF_SCALE);
+  const ctx = canvas.getContext('2d')!;
+  const length = GIF_FRAMES * FRAME_MS;
+  let raf = 0;
+  let timer = 0;
+  let start = 0;
+  const frame = (now: number) => {
+    start ||= now;
+    const t = Math.min(1, (now - start) / length);
+    ctx.save();
+    ctx.scale(GIF_SCALE, GIF_SCALE);
+    drawPicture(ctx, teams, assets, date, t);
+    ctx.restore();
+    if (t < 1) raf = requestAnimationFrame(frame);
+    else timer = window.setTimeout(onDone, 900);
+  };
+  raf = requestAnimationFrame(frame);
+  return () => {
+    cancelAnimationFrame(raf);
+    clearTimeout(timer);
+  };
+};

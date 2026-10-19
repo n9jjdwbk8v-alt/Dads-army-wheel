@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
 import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
-import { drawTeamsGraphic, makeTeamsGif, GRAPHIC_DESIGNS, type GraphicDesign } from '../lib/teamGraphic';
+import {
+  drawTeamsGraphic,
+  makeTeamsGif,
+  playTeamsAnimation,
+  GRAPHIC_DESIGNS,
+  type GraphicDesign
+} from '../lib/teamGraphic';
 import { usePersistentState } from '../lib/storage';
 
 type TeamsViewProps = {
@@ -73,10 +79,26 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
     const i = GRAPHIC_DESIGNS.findIndex(d => d.value === design);
     setDesign(GRAPHIC_DESIGNS[(i + by + GRAPHIC_DESIGNS.length) % GRAPHIC_DESIGNS.length].value);
   };
-  const picture = useRendered(key, ready, () => (animated ? makeTeamsGif : drawTeamsGraphic)(teams, design));
+  // The preview is always the finished still; an animated style also builds its GIF for sending.
+  const picture = useRendered(key, ready, () => drawTeamsGraphic(teams, design));
+  const gif = useRendered(key, ready && animated, () => makeTeamsGif(teams, design));
+  const toSend = animated ? gif : picture;
   // Only share a picture made for the teams and style currently chosen; an older one is just a placeholder.
-  const shareable = ready && picture?.key === key ? picture : null;
+  const shareable = ready && toSend?.key === key ? toSend : null;
   const fileName = `dads-army-teams.${animated ? 'gif' : 'png'}`;
+
+  // Plays an animated style in place over the preview.
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stopRef = useRef<(() => void) | null>(null);
+  const [playingKey, setPlayingKey] = useState<string | null>(null);
+  const playing = playingKey === key;
+  useEffect(() => () => stopRef.current?.(), [key]);
+  const play = async () => {
+    if (!canvasRef.current || playing) return;
+    setPlayingKey(key);
+    stopRef.current?.();
+    stopRef.current = await playTeamsAnimation(canvasRef.current, teams, design, () => setPlayingKey(null));
+  };
 
   const download = () => {
     if (!shareable) return;
@@ -164,11 +186,23 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
               ›
             </button>
           </div>
-          <img
-            src={picture.url}
-            alt="Lights vs Darks team picture"
-            className={shareable ? 'graphic__img' : 'graphic__img graphic__img--updating'}
-          />
+          <div className="graphic__frame">
+            <img
+              src={picture.url}
+              alt="Lights vs Darks team picture"
+              className={picture.key === key ? 'graphic__img' : 'graphic__img graphic__img--updating'}
+              hidden={playing}
+            />
+            <canvas ref={canvasRef} className="graphic__img" hidden={!playing} aria-label="Animated team picture" />
+            {animated && !playing && (
+              <button className="graphic__play" onClick={play} aria-label="Play animation">
+                <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+                  <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
+                </svg>
+              </button>
+            )}
+            {animated && <span className="graphic__badge">GIF</span>}
+          </div>
           <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!shareable}>
             {shareable || !animated ? 'Send to WhatsApp' : 'Making GIF…'}
           </button>

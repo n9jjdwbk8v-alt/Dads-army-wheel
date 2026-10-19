@@ -407,8 +407,60 @@
   background: #d0ebdb;
 }
 
+.graphic__frame {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+
+.graphic__frame .graphic__img {
+  max-width: none;
+}
+
+.graphic__img[hidden] {
+  display: none;
+}
+
+.graphic__play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  padding: 0 0 0 5px;
+  transform: translate(-50%, -50%);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.graphic__play:active {
+  transform: translate(-50%, -50%) scale(0.94);
+}
+
+.graphic__badge {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--green-800);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
 .graphic__img {
   display: block;
+  height: auto;
   width: 100%;
   max-width: 420px;
   border-radius: 14px;
