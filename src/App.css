@@ -606,34 +606,35 @@
 
 /* ---------- Dan Smith mode ---------- */
 
+/* The badge stays put; the swipe happens inside its dashed border (220px inside, matching actionWidth). */
 .classified {
   width: 230px;
   margin-top: 0.25rem;
+  padding: 3px;
+  border: 2px dashed rgba(230, 240, 214, 0.14);
+  border-radius: 4px;
+  transform: rotate(-2deg);
 }
 
 .classified .swipe-row__surface {
   justify-content: center;
-  padding: 0 10px;
+  padding: 0;
 }
 
-.classified__stamp {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 34px;
-  border: 2px dashed currentColor;
-  border-radius: 4px;
+.classified__word {
   color: rgba(230, 240, 214, 0.14);
   font-family: var(--font-stencil);
   font-size: 1rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  transform: rotate(-2deg);
 }
 
 .classified .swipe-row__glyph {
+  grid-auto-flow: column;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-stencil);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }

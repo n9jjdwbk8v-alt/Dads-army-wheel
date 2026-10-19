@@ -136,33 +136,34 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
           <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
         )}
         {enough && (
-          // A faint classified strip: swipe it along to uncover Dan Smith mode, then tap that.
-          <SwipeRow
-            key={classified}
-            className="classified"
-            label="Classified"
-            height={50}
-            radius={6}
-            actionWidth={150}
-            fullSwipe={false}
-            rowColor="#151d10"
-            drawerColor="#151d10"
-            actionColor="#c4321f"
-            textColor="#e6f0d6"
-            actions={[
-              {
-                id: 'dan-smith',
-                label: 'Dan Smith mode',
-                icon: <HugeiconsIcon icon={BombIcon} size={18} strokeWidth={2} />
-              }
-            ]}
-            onCommit={() => {
-              onSplit(stackTeams(present));
-              setClassified(c => c + 1);
-            }}
-          >
-            <span className="classified__stamp">Classified</span>
-          </SwipeRow>
+          // A faint classified badge: swipe inside it to slide the word away and uncover Dan Smith mode, then tap.
+          <div className="classified">
+            <SwipeRow
+              key={classified}
+              label="Classified"
+              height={38}
+              radius={2}
+              actionWidth={220}
+              fullSwipe={false}
+              rowColor="#151d10"
+              drawerColor="#151d10"
+              actionColor="#c4321f"
+              textColor="#e6f0d6"
+              actions={[
+                {
+                  id: 'dan-smith',
+                  label: 'Dan Smith mode',
+                  icon: <HugeiconsIcon icon={BombIcon} size={16} strokeWidth={2} />
+                }
+              ]}
+              onCommit={() => {
+                onSplit(stackTeams(present));
+                setClassified(c => c + 1);
+              }}
+            >
+              <span className="classified__word">Classified</span>
+            </SwipeRow>
+          </div>
         )}
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
       </div>
