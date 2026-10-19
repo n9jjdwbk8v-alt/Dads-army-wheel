@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRendered } from './useRendered';
 import { copyText, download as downloadFile, shareOrDownload } from '../lib/share';
-import StarBorder from './reactbits/StarBorder';
 import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import {
   drawTeamsGraphic,
@@ -120,16 +119,13 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
             : 'Tick at least 2 players on the Roster tab.'}
         </p>
         <div className="split__actions">
-          <StarBorder
-            color="#ffffff"
-            backgroundColor="#c8e66b"
-            textColor="#12180d"
-            className="cta"
+          <button
+            className="btn btn--primary cta"
             disabled={!enough}
             onClick={() => onSplit(splitTeams(present, recent))}
           >
             {hasTeams && !stale ? 'Reshuffle' : 'Split teams'}
-          </StarBorder>
+          </button>
         </div>
         {enough && recent.length > 0 && (
           <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
