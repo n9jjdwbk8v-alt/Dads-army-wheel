@@ -1,8 +1,8 @@
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { isGoalie, type Teams } from './teams';
 import { fit, loadFonts, loadLogo, newCanvas } from './canvasKit';
+import { drawDanSmithPicture } from './danSmithGraphic';
 import {
-  COMIC,
   H,
   HEADER,
   SLASH_TOP,
@@ -148,65 +148,14 @@ const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: numbe
   ctx.restore();
 };
 
-/** A jagged comic-book burst, its points varied a little but the same every time it's drawn. */
-const burst = (
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  rx: number,
-  ry: number,
-  points: number,
-  inner: number,
-  turn: number,
-  color: string
-) => {
-  ctx.beginPath();
-  for (let i = 0; i <= points * 2; i++) {
-    const angle = turn + (i / (points * 2)) * Math.PI * 2;
-    const r = i % 2 ? inner : 1 + (Math.sin(i * 12.9898) * 0.5 + 0.5) * 0.12;
-    ctx.lineTo(cx + Math.cos(angle) * rx * r, cy + Math.sin(angle) * ry * r);
-  }
-  ctx.closePath();
-  ctx.fillStyle = color;
-  ctx.fill();
-};
-
-/** Dan Smith mode's explosion, filling the header right of the logo in place of the title. */
-const drawDanSmithBurst = (ctx: CanvasRenderingContext2D) => {
-  const cx = 690;
-  const cy = 116;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, W, HEADER - 14);
-  ctx.clip();
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-  ctx.shadowBlur = 20;
-  burst(ctx, cx, cy, 380, 118, 18, 0.74, 0.1, '#d7261e');
-  ctx.shadowBlur = 0;
-  burst(ctx, cx, cy, 340, 100, 18, 0.76, 0.27, '#ff8a00');
-  burst(ctx, cx, cy, 300, 84, 16, 0.8, 0.05, '#ffd400');
-  ctx.translate(cx, cy + 4);
-  ctx.rotate(-0.06);
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.letterSpacing = '4px';
-  ctx.font = `78px ${COMIC}`;
-  const width = ctx.measureText('DAN SMITH MODE').width;
-  if (width > 500) ctx.font = `${Math.floor((78 * 500) / width)}px ${COMIC}`;
-  ctx.lineWidth = 10;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = '#111111';
-  ctx.strokeText('DAN SMITH MODE', 0, 0);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillText('DAN SMITH MODE', 0, 0);
-  ctx.restore();
-};
-
 /**
  * Draws the line-up. On an animated design `t` runs 0 → 1 through the animation (each part flickering on for
  * 'neon', or sliding in for 'slide'); 1 is the finished picture.
  */
 const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, date: Date, t: number) => {
+  const dateText = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
+  // Dan Smith mode has its own picture, whatever style is picked.
+  if (teams.danSmith) return drawDanSmithPicture(ctx, teams, dateText);
   const { theme } = a;
   const lit = (start: number, seed: number) => theme.animated !== 'neon' || neonLit(t, start, seed);
   const slide = (start: number, length: number) => (theme.animated === 'slide' ? easeOut(phase(t, start, length)) : 1);
@@ -227,25 +176,19 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     ctx.drawImage(a.logo, PAD - 16, 20, h * a.logoAspect, h);
     ctx.globalAlpha = 1;
   }
-  const dateText = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
   // Header text sits right of the logo, shrunk if a long title or wide font would reach it.
   const headerRoom = W - PAD - (PAD - 16 + (HEADER - 52) * a.logoAspect + 30);
   ctx.textAlign = 'right';
   ctx.letterSpacing = '3px';
-  if (teams.danSmith) {
-    // Dan Smith mode blows the title away with an explosion.
-    drawDanSmithBurst(ctx);
-  } else {
-    ctx.font = theme.headerFont(62);
-    const titleWidth = ctx.measureText(theme.headerTitle).width;
-    if (titleWidth > headerRoom) ctx.font = theme.headerFont(Math.floor((62 * headerRoom) / titleWidth));
-    ctx.fillStyle = lightUp(ctx, theme, theme.headerText ?? '#ffffff', headerOn);
-    ctx.fillText(theme.headerTitle, W - PAD, 92);
-    ctx.letterSpacing = '4px';
-    ctx.font = theme.subFont(34);
-    ctx.fillStyle = lightUp(ctx, theme, theme.headerSub ?? 'rgba(255, 255, 255, 0.7)', headerOn);
-    ctx.fillText([theme.headerDate, dateText].filter(Boolean).join(' · '), W - PAD, 160);
-  }
+  ctx.font = theme.headerFont(62);
+  const titleWidth = ctx.measureText(theme.headerTitle).width;
+  if (titleWidth > headerRoom) ctx.font = theme.headerFont(Math.floor((62 * headerRoom) / titleWidth));
+  ctx.fillStyle = lightUp(ctx, theme, theme.headerText ?? '#ffffff', headerOn);
+  ctx.fillText(theme.headerTitle, W - PAD, 92);
+  ctx.letterSpacing = '4px';
+  ctx.font = theme.subFont(34);
+  ctx.fillStyle = lightUp(ctx, theme, theme.headerSub ?? 'rgba(255, 255, 255, 0.7)', headerOn);
+  ctx.fillText([theme.headerDate, dateText].filter(Boolean).join(' · '), W - PAD, 160);
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 

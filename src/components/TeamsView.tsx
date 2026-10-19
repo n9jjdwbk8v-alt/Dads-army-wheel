@@ -51,8 +51,10 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
   const ready = hasTeams && !stale;
   const teamsKey = `${teams.danSmith ? 'dan-smith|' : ''}${idsKey(teams.light)}|${idsKey(teams.dark)}`;
-  const key = `${teamsKey}|${design}`;
-  const animated = GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
+  // Dan Smith mode has one picture of its own, so the style doesn't matter and there's nothing to animate.
+  const danSmith = !!teams.danSmith;
+  const key = danSmith ? teamsKey : `${teamsKey}|${design}`;
+  const animated = !danSmith && GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
 
   // Mini previews of every style with tonight's teams, filled in one at a time.
   const [thumbs, setThumbs] = useState<{ key: string; urls: Partial<Record<GraphicDesign, string>> }>({
@@ -60,7 +62,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
     urls: {}
   });
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || danSmith) return;
     let cancelled = false;
     (async () => {
       const urls: Partial<Record<GraphicDesign, string>> = {};
@@ -73,7 +75,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
     return () => {
       cancelled = true;
     };
-  }, [teams, teamsKey, ready]);
+  }, [teams, teamsKey, ready, danSmith]);
   const thumbUrls = thumbs.key === teamsKey ? thumbs.urls : {};
   // The preview is always the finished still; an animated style also builds its GIF for sending.
   const picture = useRendered(key, ready, () => drawTeamsGraphic(teams, design));
@@ -173,24 +175,28 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
             )}
             {animated && <span className="graphic__badge">GIF</span>}
           </div>
-          <p className="graphic__label">Choose a style</p>
-          <div className="thumbs" role="radiogroup" aria-label="Picture style">
-            {GRAPHIC_DESIGNS.map(d => (
-              <button
-                key={d.value}
-                role="radio"
-                aria-checked={d.value === design}
-                className={d.value === design ? 'thumb thumb--on' : 'thumb'}
-                onClick={() => setDesign(d.value)}
-              >
-                <span className="thumb__img">
-                  {thumbUrls[d.value] && <img src={thumbUrls[d.value]} alt="" />}
-                  {d.animated && <span className="thumb__gif">GIF</span>}
-                </span>
-                <span className="thumb__label">{d.label}</span>
-              </button>
-            ))}
-          </div>
+          {!danSmith && (
+            <>
+              <p className="graphic__label">Choose a style</p>
+              <div className="thumbs" role="radiogroup" aria-label="Picture style">
+                {GRAPHIC_DESIGNS.map(d => (
+                  <button
+                    key={d.value}
+                    role="radio"
+                    aria-checked={d.value === design}
+                    className={d.value === design ? 'thumb thumb--on' : 'thumb'}
+                    onClick={() => setDesign(d.value)}
+                  >
+                    <span className="thumb__img">
+                      {thumbUrls[d.value] && <img src={thumbUrls[d.value]} alt="" />}
+                      {d.animated && <span className="thumb__gif">GIF</span>}
+                    </span>
+                    <span className="thumb__label">{d.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!shareable}>
             {shareable || !animated ? 'Send to WhatsApp' : 'Making GIF…'}
           </button>

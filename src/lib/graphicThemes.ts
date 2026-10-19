@@ -27,16 +27,17 @@ export const darksShape = (ctx: CanvasRenderingContext2D) => {
   ctx.closePath();
 };
 
-const DISPLAY = '"Barlow Condensed", "Arial Narrow", sans-serif';
+export const DISPLAY = '"Barlow Condensed", "Arial Narrow", sans-serif';
 const STENCIL = '"Black Ops One", "Barlow Condensed", sans-serif';
 const TYPEWRITER = '"Special Elite", "Courier New", monospace';
 const MONO = '"Share Tech Mono", "Courier New", monospace';
 const BODY = 'Inter, system-ui, sans-serif';
 const MARKER = '"Permanent Marker", "Comic Sans MS", cursive';
 const HAND = '"Gochi Hand", "Comic Sans MS", cursive';
-export const COMIC = 'Bangers, Impact, sans-serif';
+const COMIC = 'Bangers, Impact, sans-serif';
 const ENGRAVED = 'Cinzel, Georgia, serif';
-const NEON = '"Tilt Neon", "Arial Rounded MT Bold", sans-serif';
+export const NEON = '"Tilt Neon", "Arial Rounded MT Bold", sans-serif';
+export const ANTON = 'Anton, Impact, sans-serif';
 
 export const FONT_LOADS = [
   `800 100px ${DISPLAY}`,
@@ -53,6 +54,7 @@ export const FONT_LOADS = [
   `700 40px ${ENGRAVED}`,
   `900 60px ${ENGRAVED}`,
   `40px ${NEON}`,
+  `60px ${ANTON}`,
   `italic 800 60px ${DISPLAY}`
 ];
 
