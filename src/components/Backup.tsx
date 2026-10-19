@@ -12,6 +12,8 @@ type BackupProps = {
 export default function Backup({ players, history, onRestore }: BackupProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
+  // A read backup waiting for the user to confirm it in the page (confirm() is blocked in some apps).
+  const [pending, setPending] = useState<BackupData | null>(null);
 
   const save = async () => {
     await shareOrDownload(makeBackupFile(players, history));
@@ -22,17 +24,19 @@ export default function Backup({ players, history, onRestore }: BackupProps) {
     e.target.value = '';
     if (!file) return;
     try {
-      const backup = await readBackupFile(file);
-      const when = backup.saved ? ` saved ${new Date(backup.saved).toLocaleDateString()}` : '';
-      const ok = confirm(
-        `Replace your roster of ${players.length} with the ${backup.players.length} players from this backup${when}?`
-      );
-      if (!ok) return;
-      onRestore(backup);
-      setMessage(`Restored ${backup.players.length} players.`);
+      setPending(await readBackupFile(file));
+      setMessage('');
     } catch (err) {
+      setPending(null);
       setMessage((err as Error).message);
     }
+  };
+
+  const apply = () => {
+    if (!pending) return;
+    onRestore(pending);
+    setMessage(`Restored ${pending.players.length} players.`);
+    setPending(null);
   };
 
   return (
@@ -50,6 +54,22 @@ export default function Backup({ players, history, onRestore }: BackupProps) {
         </button>
         <input ref={inputRef} type="file" accept=".json,application/json" hidden onChange={restore} />
       </div>
+      {pending && (
+        <div className="backup__confirm">
+          <p className="backup__message">
+            Replace your roster of {players.length} with the {pending.players.length} players from this backup
+            {pending.saved ? ` saved ${new Date(pending.saved).toLocaleDateString()}` : ''}?
+          </p>
+          <div className="backup__actions">
+            <button className="btn btn--primary" onClick={apply}>
+              Replace roster
+            </button>
+            <button className="btn btn--ghost" onClick={() => setPending(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
       {message && <p className="backup__message">{message}</p>}
     </section>
   );

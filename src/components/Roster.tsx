@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import ScrubField from './reactbits/ScrubField';
 import SpringCheck from './reactbits/SpringCheck';
 import { isGoalie, type Player } from '../lib/teams';
@@ -13,6 +13,15 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
   const [name, setName] = useState('');
   const [skill, setSkill] = useState(5);
   const [filter, setFilter] = useState('');
+  // Id of the player whose × was tapped once; a second tap removes them. Popups like confirm() are
+  // blocked in some Home Screen apps and embedded previews, so the check happens in the page instead.
+  const [arming, setArming] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!arming) return;
+    const t = setTimeout(() => setArming(null), 4000);
+    return () => clearTimeout(t);
+  }, [arming]);
 
   const hereCount = players.filter(p => p.here).length;
   const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name));
@@ -30,7 +39,9 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
   };
 
   const remove = (p: Player) => {
-    if (confirm(`Remove ${p.name} from the roster?`)) setPlayers(ps => ps.filter(x => x.id !== p.id));
+    if (arming !== p.id) return setArming(p.id);
+    setArming(null);
+    setPlayers(ps => ps.filter(x => x.id !== p.id));
   };
 
   const setAll = (here: boolean) => setPlayers(ps => ps.map(p => ({ ...p, here })));
@@ -122,8 +133,12 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
                 chipColor="#ffffff"
                 suffix=""
               />
-              <button className="icon-btn" onClick={() => remove(p)} aria-label={`Remove ${p.name}`}>
-                ×
+              <button
+                className={arming === p.id ? 'icon-btn icon-btn--confirm' : 'icon-btn'}
+                onClick={() => remove(p)}
+                aria-label={arming === p.id ? `Tap again to remove ${p.name}` : `Remove ${p.name}`}
+              >
+                ×{arming === p.id && <span className="icon-btn__confirm">Remove</span>}
               </button>
             </li>
           ))}

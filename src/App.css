@@ -166,6 +166,27 @@
   color: #b42318;
 }
 
+.icon-btn--confirm {
+  position: relative;
+}
+
+/* Spreads left over the skill box so the row doesn't reflow on narrow phones. */
+.icon-btn__confirm {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.85rem;
+  border-radius: 10px;
+  background: #b42318;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .text-input {
   flex: 1;
   min-width: 0;
@@ -807,7 +828,7 @@
     padding-left: 0.5rem;
   }
 
-  .gameday .roster__check {
+  .roster__check {
     --sc-font: 15px !important;
   }
 
