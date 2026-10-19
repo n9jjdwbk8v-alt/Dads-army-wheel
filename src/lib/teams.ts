@@ -30,10 +30,13 @@ const random = () => {
 
 /**
  * Prepares to split players into two groups — the first of floor(n/2), the second the rest — whose skill totals
- * are as close as possible, or within `slack` points of that. Each call of the returned function picks one of
- * those splits uniformly at random.
+ * are a gap apart that `allow` accepts. It's given each gap and all the achievable gaps, smallest first. Each
+ * call of the returned function picks one of the allowed splits uniformly at random.
  */
-const balancedSampler = (players: Player[], slack = 0): (() => [Player[], Player[]]) => {
+const splitSampler = (
+  players: Player[],
+  allow: (gap: number, gaps: number[]) => boolean
+): (() => [Player[], Player[]]) => {
   const n = players.length;
   if (!n) return () => [[], []];
   const k = Math.floor(n / 2);
@@ -55,14 +58,12 @@ const balancedSampler = (players: Player[], slack = 0): (() => [Player[], Player
     }
   }
 
-  // Find the smallest achievable gap and the skill sums that come within `slack` of it.
-  let bestGap = Infinity;
-  for (let s = 0; s <= total; s++) {
-    if (ways[n][k][s] > 0) bestGap = Math.min(bestGap, Math.abs(total - 2 * s));
-  }
+  // Every achievable gap between the teams' totals, then the skill sums whose gap is allowed.
+  const gapOfSum = (s: number) => Math.abs(total - 2 * s);
+  const gaps = [...new Set(ways[n][k].flatMap((w, s) => (w > 0 ? [gapOfSum(s)] : [])))].sort((a, b) => a - b);
   const targets: number[] = [];
   for (let s = 0; s <= total; s++) {
-    if (ways[n][k][s] > 0 && Math.abs(total - 2 * s) <= bestGap + slack) targets.push(s);
+    if (ways[n][k][s] > 0 && allow(gapOfSum(s), gaps)) targets.push(s);
   }
   const weight = targets.reduce((sum, s) => sum + ways[n][k][s], 0);
 
@@ -93,6 +94,9 @@ const balancedSampler = (players: Player[], slack = 0): (() => [Player[], Player
     return [players.filter(p => chosen.has(p.id)), players.filter(p => !chosen.has(p.id))];
   };
 };
+
+/** Splits whose totals are as close as possible, or within `slack` points of that. */
+const balancedSampler = (players: Player[], slack = 0) => splitSampler(players, (gap, gaps) => gap <= gaps[0] + slack);
 
 /** The teams from one game night, as player ids on each side. */
 export type GameRecord = { date: string; light: string[]; dark: string[] };
@@ -175,18 +179,22 @@ export const splitTeams = (players: Player[], recent: GameRecord[] = []): Teams 
   return best;
 };
 
+/** How far Dan Smith mode goes from the most even split towards all the best players on one side (0 to 1). */
+const STACKING = 0.4;
+
 /**
- * Dan Smith mode: the highest-rated skaters on one team and the rest on the other, as unfair as it gets.
- * Goalies are still shared out one per team, and which side gets the stars is a coin flip.
+ * Dan Smith mode: one team clearly stronger, but not so much it isn't a game. The gap between the teams' totals
+ * is the achievable one nearest STACKING of the way from the most even split to the fully stacked one. Goalies
+ * are still shared out one per team, and which side is stronger is a coin flip.
  */
 export const stackTeams = (players: Player[]): Teams => {
-  const skaters = players
-    .filter(p => !isGoalie(p))
-    .map(p => ({ p, r: random() }))
-    .sort((a, b) => b.p.skill - a.p.skill || a.r - b.r)
-    .map(x => x.p);
-  const half = Math.floor(skaters.length / 2);
-  return { ...withGoalies([skaters.slice(0, half), skaters.slice(half)], players.filter(isGoalie)), danSmith: true };
+  const skaters = players.filter(p => !isGoalie(p));
+  const sample = splitSampler(skaters, (gap, gaps) => {
+    const target = gaps[0] + (gaps[gaps.length - 1] - gaps[0]) * STACKING;
+    const nearest = gaps.reduce((best, g) => (Math.abs(g - target) < Math.abs(best - target) ? g : best));
+    return gap === nearest;
+  });
+  return { ...withGoalies(sample(), players.filter(isGoalie)), danSmith: true };
 };
 
 const withGoalies = ([skatersA, skatersB]: [Player[], Player[]], goalies: Player[]): Teams => {
