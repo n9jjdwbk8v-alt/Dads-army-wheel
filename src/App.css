@@ -168,6 +168,30 @@
   color: #c8e66b;
 }
 
+/* A choice inside a white panel: two patches, dark labels. */
+.patches--choice {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 220px;
+  gap: 1.25rem;
+}
+
+.patches--choice .patch__shield {
+  filter: drop-shadow(0 3px 4px rgba(15, 81, 50, 0.3));
+}
+
+.patches--choice .patch--on .patch__shield {
+  filter: drop-shadow(0 0 8px rgba(156, 194, 63, 0.6)) drop-shadow(0 3px 4px rgba(15, 81, 50, 0.3));
+}
+
+.patches--choice .patch__label {
+  color: var(--muted);
+  text-shadow: none;
+}
+
+.patches--choice .patch--on .patch__label {
+  color: var(--green-800);
+}
+
 @media (max-width: 359px) {
   .patch__shield {
     width: 52px;
@@ -680,7 +704,7 @@
   justify-items: stretch;
 }
 
-.gameday__details > .rubber-segment {
+.gameday__details > .patches {
   justify-self: center;
 }
 

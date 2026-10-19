@@ -20,14 +20,28 @@ export const download = (file: Blob & { name: string }) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-/** Copies `text`, falling back to a prompt the user can copy from. Resolves true if it was copied. */
+/** Copies `text`. Resolves true if it was copied. */
 export const copyText = async (text: string) => {
   try {
     await navigator.clipboard.writeText(text);
     return true;
   } catch {
-    prompt('Copy this:', text);
-    return false;
+    // Older phones and some embedded views block the clipboard API, and popups too; copy from a hidden box.
+    const box = document.createElement('textarea');
+    box.value = text;
+    box.setAttribute('readonly', '');
+    box.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+    document.body.append(box);
+    box.select();
+    box.setSelectionRange(0, text.length);
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } catch {
+      copied = false;
+    }
+    box.remove();
+    return copied;
   }
 };
 

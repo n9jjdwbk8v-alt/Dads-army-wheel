@@ -83,6 +83,23 @@ export const owedText = (list: Debt[]) => {
   ].join('\n');
 };
 
+/** A night's fees as a message: who has paid and who still owes. */
+export const nightText = (night: FeeNight, players: Player[]) => {
+  const names = new Map(players.map(p => [p.id, p.name]));
+  const paid = new Set(night.paid);
+  const rows = night.due
+    .map(d => ({ name: names.get(d.id) ?? d.name, paid: paid.has(d.id) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const paidRows = rows.filter(r => r.paid);
+  const unpaid = rows.filter(r => !r.paid);
+  return [
+    `🏒 Dads Army — ice fees, ${nightLabel(night.date)}`,
+    `${money(night.amount)} each · ${paidRows.length} of ${rows.length} paid · ${money(paidRows.length * night.amount)} of ${money(rows.length * night.amount)}`,
+    ...(paidRows.length ? ['', 'PAID', ...paidRows.map(r => `✅ ${r.name}`)] : []),
+    ...(unpaid.length ? ['', 'STILL TO PAY', ...unpaid.map(r => `❌ ${r.name} — ${money(night.amount)}`)] : [])
+  ].join('\n');
+};
+
 /** Keeps only well-formed nights from a backup file or this phone's storage. */
 export const readFees = (raw: unknown): FeesState | undefined => {
   if (!raw || typeof raw !== 'object') return undefined;

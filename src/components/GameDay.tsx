@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import RubberSegment from './reactbits/RubberSegment';
+import PatchTabs, { GameIcon, ScrimmageIcon } from './PatchTabs';
 import SpringCheck from './reactbits/SpringCheck';
 import { useRendered } from './useRendered';
 import type { GameDayState } from '../lib/gameDay';
@@ -130,17 +130,14 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
   return (
     <section className="gameday">
       <div className="panel gameday__details">
-        <RubberSegment
-          items={[
-            { value: 'game', label: 'Game' },
-            { value: 'scrimmage', label: 'Scrimmage' }
+        <PatchTabs<SheetKind>
+          mode="choice"
+          tabs={[
+            { value: 'game', label: 'Game', icon: <GameIcon /> },
+            { value: 'scrimmage', label: 'Scrimmage', icon: <ScrimmageIcon /> }
           ]}
           value={gameDay.kind}
-          onChange={v => set({ kind: v as SheetKind })}
-          trackColor="#e3f3e9"
-          thumbColor="#0f5132"
-          textColor="#0f5132"
-          activeTextColor="#ffffff"
+          onChange={kind => set({ kind })}
           aria-label="Game or scrimmage"
         />
         <label className="field">

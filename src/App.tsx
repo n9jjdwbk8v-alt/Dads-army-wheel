@@ -52,7 +52,7 @@ export default function App() {
       </header>
 
       <main className="main">
-        <div className="tabs">
+        <nav className="tabs">
           <PatchTabs<Tab>
             tabs={[
               { value: 'roster', label: 'Roster', icon: <RosterIcon />, badge: players.length ? { text: String(present.length), spoken: `${present.length} here tonight` } : undefined },
@@ -62,8 +62,9 @@ export default function App() {
             ]}
             value={tab}
             onChange={setTab}
+            aria-label="Section"
           />
-        </div>
+        </nav>
 
         {tab === 'roster' && (
           <Roster players={players} setPlayers={setPlayers}>

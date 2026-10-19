@@ -5,6 +5,7 @@ import {
   debts,
   money,
   nightLabel,
+  nightText,
   owedText,
   settleUp,
   startNight,
@@ -35,7 +36,8 @@ export default function Fees({ players, fees, setFees }: FeesProps) {
   const nights = [...fees.nights].sort((a, b) => a.date.localeCompare(b.date));
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [note, setNote] = useState('');
+  // A short message under the panel whose button was used: "Copied!" and so on.
+  const [note, setNote] = useState<{ panel: 'night' | 'owed'; text: string } | null>(null);
   const [armed, confirmTap] = useConfirmTap();
 
   const night = nights.find(n => n.id === selectedId) ?? nights[nights.length - 1];
@@ -60,19 +62,27 @@ export default function Fees({ players, fees, setFees }: FeesProps) {
     setEditing(false);
   };
 
-  const flash = (text: string) => {
-    setNote(text);
-    window.setTimeout(() => setNote(''), 2200);
+  const flash = (panel: 'night' | 'owed', text: string) => {
+    setNote({ panel, text });
+    window.setTimeout(() => setNote(n => (n?.text === text ? null : n)), 2200);
   };
 
-  const send = async () => {
-    const result = await shareText(owedText(owed));
-    if (result === 'copied') flash('Copied — paste it into WhatsApp.');
+  const send = async (panel: 'night' | 'owed', text: string) => {
+    const result = await shareText(text);
+    if (result === 'copied') flash(panel, 'Copied — paste it into WhatsApp.');
+    if (result === 'failed') flash(panel, "Couldn't share or copy on this phone.");
   };
 
-  const copy = async () => {
-    if (await copyText(owedText(owed))) flash('Copied!');
+  const copy = async (panel: 'night' | 'owed', text: string) => {
+    flash(panel, (await copyText(text)) ? 'Copied — paste it anywhere.' : "Couldn't copy on this phone — try Share.");
   };
+
+  const message = (panel: 'night' | 'owed') =>
+    note?.panel === panel && (
+      <p className="backup__message" role="status">
+        {note.text}
+      </p>
+    );
 
   return (
     <section className="gameday fees">
@@ -106,6 +116,17 @@ export default function Fees({ players, fees, setFees }: FeesProps) {
               setEditing={setEditing}
               onChange={update => updateNight(night.id, update)}
             />
+            {night.due.length > 0 && !editing && (
+              <div className="split__actions">
+                <button className="btn btn--ghost" onClick={() => copy('night', nightText(night, players))}>
+                  📋 Copy night
+                </button>
+                <button className="btn btn--ghost" onClick={() => send('night', nightText(night, players))}>
+                  Share night
+                </button>
+              </div>
+            )}
+            {message('night')}
             <div className="split__actions">
               <button className="btn btn--primary" onClick={newNight}>
                 + New night
@@ -175,17 +196,17 @@ export default function Fees({ players, fees, setFees }: FeesProps) {
         )}
         {fees.nights.length > 0 && (
           <>
-            <button className="btn btn--primary btn--whatsapp fees__send" onClick={send}>
+            <button className="btn btn--primary btn--whatsapp fees__send" onClick={() => send('owed', owedText(owed))}>
               Send who owes to WhatsApp
             </button>
             <div className="split__actions">
-              <button className="btn btn--ghost" onClick={copy}>
-                Copy as text
+              <button className="btn btn--ghost" onClick={() => copy('owed', owedText(owed))}>
+                📋 Copy as text
               </button>
             </div>
           </>
         )}
-        {note && <p className="backup__message">{note}</p>}
+        {message('owed')}
       </div>
 
       <div className="panel fees__settings">
