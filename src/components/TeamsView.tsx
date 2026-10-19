@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
-import SpotlightCard from './reactbits/SpotlightCard';
 import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import { drawTeamsGraphic, GRAPHIC_DESIGNS, type GraphicDesign } from '../lib/teamGraphic';
 import { usePersistentState } from '../lib/storage';
@@ -135,13 +134,6 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
       </div>
 
-      {hasTeams && (
-        <div key={idsKey(teams.light)} className={stale ? 'teams teams--stale' : 'teams'}>
-          <TeamCard team="light" players={teams.light} />
-          <TeamCard team="dark" players={teams.dark} />
-        </div>
-      )}
-
       {ready && picture && (
         <div className="panel graphic">
           <p className="graphic__label">Picture style</p>
@@ -177,39 +169,5 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
         </div>
       )}
     </section>
-  );
-}
-
-function TeamCard({ team, players }: { team: Team; players: Player[] }) {
-  const dark = team === 'dark';
-  return (
-    <SpotlightCard
-      theme={dark ? 'dark' : 'light'}
-      spotlightColor={dark ? 'rgba(163, 230, 53, 0.35)' : 'rgba(46, 158, 91, 0.25)'}
-      className={`team team--${team}`}
-      style={
-        {
-          '--spotlight-card-surface': dark ? '#0f5132' : '#ffffff',
-          '--spotlight-card-border': dark ? '#1f8a4c' : '#b9e2c8'
-        } as React.CSSProperties
-      }
-    >
-      <header className="team__head">
-        <h3>{TEAM_LABEL[team]}</h3>
-        <span className="team__count">{players.length} players</span>
-      </header>
-      <ol className="team__list">
-        {players.map(p => (
-          <li key={p.id}>
-            {p.name}
-            {isGoalie(p) && (
-              <span className="goalie-tag" title="Goalie">
-                G
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
-    </SpotlightCard>
   );
 }

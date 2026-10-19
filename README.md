@@ -14,7 +14,7 @@ Players and the last split are saved in the browser (localStorage) on that devic
 
 The site has a woodland camo background generated in code (`src/lib/camo.ts`) and installs to a phone's Home Screen as **Dads Army** with the club logo as its icon.
 
-UI components come from [React Bits](https://reactbits.dev) (`src/components/reactbits/`): ShinyText, RubberSegment, SpringCheck, ScrubField, StarBorder, SpotlightCard, Noise and ClickSpark.
+UI components come from [React Bits](https://reactbits.dev) (`src/components/reactbits/`): ShinyText, RubberSegment, SpringCheck, ScrubField, StarBorder, Noise and ClickSpark.
 
 ## Develop
 

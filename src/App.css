@@ -339,13 +339,6 @@
   font-size: 0.9rem;
 }
 
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px) scale(0.96);
-  }
-}
-
 .graphic {
   display: flex;
   flex-direction: column;
@@ -409,7 +402,7 @@
   min-height: 52px;
 }
 
-/* ---------- Teams ---------- */
+/* ---------- Goalie tag ---------- */
 
 .goalie-tag {
   display: inline-grid;
@@ -426,73 +419,3 @@
   line-height: 1;
   vertical-align: middle;
 }
-
-.teams {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-}
-
-.team.spotlight-card {
-  padding: 1rem;
-  border-radius: 18px;
-}
-
-.teams--stale {
-  opacity: 0.45;
-}
-
-.team--light {
-  color: var(--green-800);
-}
-
-.team--dark {
-  color: #fff;
-}
-
-.team__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.25rem;
-}
-
-.team__head h3 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 1.9rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.team__count {
-  font-size: 0.8rem;
-  opacity: 0.75;
-}
-
-.team__list {
-  margin: 0.75rem 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 0.3rem;
-}
-
-.team__list li {
-  padding: 0.4rem 0.6rem;
-  border-radius: 10px;
-  font-weight: 500;
-  animation: pop-in 0.35s ease-out;
-  overflow-wrap: anywhere;
-}
-
-.team--light .team__list li {
-  background: var(--green-50);
-}
-
-.team--dark .team__list li {
-  background: rgba(255, 255, 255, 0.1);
-}
-
