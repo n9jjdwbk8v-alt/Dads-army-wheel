@@ -10,14 +10,17 @@ export const LINE_STYLES: { value: LineStyle; label: string; hint: string }[] = 
   { value: 'mixed', label: 'Mixed pairs', hint: 'Each line has one stronger player with less experienced ones.' }
 ];
 
+/** A spot in the line-up, which may be empty. */
+type Spot = Player | undefined;
+
 export type Lineup = {
-  /** Forward lines as [LW, C, RW]; a short line has fewer players. */
-  forwards: Player[][];
+  /** Forward lines as [LW, C, RW]. */
+  forwards: Spot[][];
   /** Defence pairs as [LD, RD]. */
-  defence: Player[][];
-  /** Starting goalie first, then backups. */
-  goalies: Player[];
-  /** Available skaters who didn't make a full line; they rotate in. */
+  defence: Spot[][];
+  /** [starter, backup]. */
+  goalies: Spot[];
+  /** Available players who aren't in a line; they rotate in. */
   spares: Player[];
 };
 
@@ -83,14 +86,90 @@ const group = (players: Player[], size: number, style: LineStyle) => {
 export const buildLineup = (players: Player[], style: LineStyle): Lineup => {
   const forwards = group(players.filter(p => positionOf(p) === 'F'), 3, style);
   const defence = group(players.filter(p => positionOf(p) === 'D'), 2, style);
+  const goalies = players.filter(p => positionOf(p) === 'G').sort(bySkill);
   return {
     // The strongest forward in each line takes centre, with the next on the left wing.
     forwards: forwards.groups.map(line => {
       const [best, ...rest] = [...line].sort(bySkill);
-      return rest.length ? [rest[0], best, ...rest.slice(1)] : [best];
+      return [rest[0], best, rest[1]];
     }),
-    defence: defence.groups.map(pair => [...pair].sort(bySkill)),
-    goalies: players.filter(p => positionOf(p) === 'G').sort(bySkill),
-    spares: [...forwards.spares, ...defence.spares]
+    defence: defence.groups.map(pair => {
+      const [ld, rd] = [...pair].sort(bySkill);
+      return [ld, rd];
+    }),
+    goalies: [goalies[0], goalies[1]],
+    spares: [...forwards.spares, ...defence.spares, ...goalies.slice(2)]
   };
 };
+
+// ---------- Editing lines by hand ----------
+
+/** A line-up as player ids, so hand edits can be saved. Empty spots are null. */
+export type LineSlots = {
+  forwards: (string | null)[][];
+  defence: (string | null)[][];
+  goalies: (string | null)[];
+  spares: string[];
+};
+
+/** Where a spot is: a group, and its row and column (spares use only the column). */
+export type SlotRef = { group: 'forwards' | 'defence' | 'goalies' | 'spares'; row: number; col: number };
+
+const ids = (spots: Spot[]) => spots.map(p => p?.id ?? null);
+
+export const toSlots = (l: Lineup): LineSlots => ({
+  forwards: l.forwards.map(ids),
+  defence: l.defence.map(ids),
+  goalies: ids(l.goalies),
+  spares: l.spares.map(p => p.id)
+});
+
+/**
+ * Turns saved slots back into players. Anyone no longer in `squad` drops out, and anyone in the squad who isn't
+ * placed anywhere joins the spares.
+ */
+export const fromSlots = (slots: LineSlots, squad: Player[]): Lineup => {
+  const byId = new Map(squad.map(p => [p.id, p]));
+  const placed = new Set<string>();
+  const take = (id: string | null) => {
+    const p = id ? byId.get(id) : undefined;
+    if (p) placed.add(p.id);
+    return p;
+  };
+  const lineup: Lineup = {
+    forwards: slots.forwards.map(row => row.map(take)),
+    defence: slots.defence.map(row => row.map(take)),
+    goalies: slots.goalies.map(take),
+    spares: slots.spares.map(take).filter((p): p is Player => !!p)
+  };
+  lineup.spares.push(...squad.filter(p => !placed.has(p.id)));
+  return lineup;
+};
+
+const read = (s: LineSlots, r: SlotRef) =>
+  r.group === 'spares' ? (s.spares[r.col] ?? null) : r.group === 'goalies' ? s.goalies[r.col] : s[r.group][r.row][r.col];
+
+const write = (s: LineSlots, r: SlotRef, id: string | null) => {
+  if (r.group === 'spares') {
+    // Writing past the end adds to the spares; null leaves a gap that's tidied away below.
+    (s.spares as (string | null)[])[r.col] = id;
+  } else if (r.group === 'goalies') {
+    s.goalies[r.col] = id;
+  } else {
+    s[r.group][r.row][r.col] = id;
+  }
+};
+
+/** Swaps whoever is in two spots (either may be empty). */
+export const swapSlots = (slots: LineSlots, a: SlotRef, b: SlotRef): LineSlots => {
+  const next: LineSlots = structuredClone(slots);
+  const [va, vb] = [read(slots, a), read(slots, b)];
+  write(next, a, vb);
+  write(next, b, va);
+  next.spares = next.spares.filter(Boolean);
+  return next;
+};
+
+/** Identifies a squad and line style, so hand edits are only reused while both stay the same. */
+export const squadKey = (squad: Player[], style: LineStyle) =>
+  [style, ...squad.map(p => `${p.id}:${positionOf(p)}`).sort()].join('|');

@@ -3,7 +3,18 @@ import RubberSegment from './reactbits/RubberSegment';
 import SpringCheck from './reactbits/SpringCheck';
 import { useRendered } from './useRendered';
 import type { GameDayState } from '../lib/gameDay';
-import { buildLineup, LINE_STYLES, positionOf, type Lineup } from '../lib/lines';
+import {
+  buildLineup,
+  fromSlots,
+  LINE_STYLES,
+  positionOf,
+  squadKey,
+  swapSlots,
+  toSlots,
+  type LineSlots,
+  type Lineup,
+  type SlotRef
+} from '../lib/lines';
 import { copyText, download, shareOrDownload } from '../lib/share';
 import { detailsLine, drawTeamSheet, sheetTitle, type GameDetails, type SheetKind } from '../lib/teamSheet';
 import type { Player, Position } from '../lib/teams';
@@ -28,15 +39,15 @@ const sheetText = (lineup: Lineup, details: GameDetails) => {
   if (lineup.forwards.length) {
     lines.push('', 'FORWARDS');
     lineup.forwards.forEach((line, i) =>
-      lines.push(`L${i + 1}: ${line.map((p, j) => `${p.name} (${['LW', 'C', 'RW'][j]})`).join(' · ')}`)
+      lines.push(`L${i + 1}: ${line.map((p, j) => `${p?.name ?? '—'} (${['LW', 'C', 'RW'][j]})`).join(' · ')}`)
     );
   }
   if (lineup.defence.length) {
     lines.push('', 'DEFENCE');
-    lineup.defence.forEach((pair, i) => lines.push(`D${i + 1}: ${pair.map(p => p.name).join(' · ')}`));
+    lineup.defence.forEach((pair, i) => lines.push(`D${i + 1}: ${pair.map(p => p?.name ?? '—').join(' · ')}`));
   }
-  const [starter, ...backups] = lineup.goalies;
-  lines.push('', `GOALIE: ${starter ? starter.name : 'none yet'}${backups.length ? ` (backup: ${backups.map(p => p.name).join(', ')})` : ''}`);
+  const [starter, backup] = lineup.goalies;
+  lines.push('', `GOALIE: ${starter ? starter.name : 'none yet'}${backup ? ` (backup: ${backup.name})` : ''}`);
   if (lineup.spares.length) lines.push(`SPARES: ${lineup.spares.map(p => p.name).join(', ')}`);
   return lines.join('\n');
 };
@@ -56,7 +67,11 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
   const setPosition = (id: string, position: Position) =>
     setPlayers(ps => ps.map(p => (p.id === id ? { ...p, position } : p)));
 
-  const lineup = buildLineup(squad, gameDay.style);
+  // Hand-placed lines win while the squad and style are unchanged; otherwise show the suggestion.
+  const currentSquad = squadKey(squad, gameDay.style);
+  const edited = gameDay.manual?.key === currentSquad;
+  const lineup = edited ? fromSlots(gameDay.manual!.slots, squad) : buildLineup(squad, gameDay.style);
+  const saveSlots = (slots: LineSlots) => set({ manual: { key: currentSquad, slots } });
   const details: GameDetails = gameDay;
   // Re-draw whenever anything on the sheet changes.
   const key = JSON.stringify([lineup, details.kind, details.opponent, details.date, details.time, details.venue]);
@@ -212,7 +227,7 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
                     role="radio"
                     aria-checked={gameDay.style === s.value}
                     className={gameDay.style === s.value ? 'chip chip--on' : 'chip'}
-                    onClick={() => set({ style: s.value })}
+                    onClick={() => set({ style: s.value, manual: undefined })}
                   >
                     {s.label}
                   </button>
@@ -221,9 +236,11 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
               <p className="muted small">{LINE_STYLES.find(s => s.value === gameDay.style)?.hint}</p>
               <p className="gameday__summary">
                 {lineup.forwards.length} line{lineup.forwards.length === 1 ? '' : 's'} · {lineup.defence.length} D pair
-                {lineup.defence.length === 1 ? '' : 's'} · {lineup.goalies.length ? `${lineup.goalies.length} G` : 'no goalie'}
+                {lineup.defence.length === 1 ? '' : 's'} ·{' '}
+                {lineup.goalies.some(Boolean) ? `${lineup.goalies.filter(Boolean).length} G` : 'no goalie'}
                 {lineup.spares.length ? ` · ${lineup.spares.length} spare${lineup.spares.length === 1 ? '' : 's'}` : ''}
               </p>
+              <LineEditor lineup={lineup} edited={edited} onChange={saveSlots} onReset={() => set({ manual: undefined })} />
               {picture && (
                 <img
                   src={picture.url}
@@ -261,5 +278,111 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
         </div>
       )}
     </section>
+  );
+}
+
+const SPOT_TAGS = { forwards: ['LW', 'C', 'RW'], defence: ['LD', 'RD'], goalies: ['Starter', 'Backup'] };
+
+type LineEditorProps = {
+  lineup: Lineup;
+  edited: boolean;
+  onChange: (slots: LineSlots) => void;
+  onReset: () => void;
+};
+
+/** Tap one spot and then another to swap them; tapping a player then an empty spot moves them there. */
+function LineEditor({ lineup, edited, onChange, onReset }: LineEditorProps) {
+  const [open, setOpen] = useState(false);
+  const [picked, setPicked] = useState<SlotRef | null>(null);
+  const same = (a: SlotRef | null, b: SlotRef) => !!a && a.group === b.group && a.row === b.row && a.col === b.col;
+
+  const tap = (ref: SlotRef, filled: boolean) => {
+    if (same(picked, ref)) return setPicked(null);
+    if (!picked) {
+      if (filled) setPicked(ref);
+      return;
+    }
+    onChange(swapSlots(toSlots(lineup), picked, ref));
+    setPicked(null);
+  };
+
+  const spot = (ref: SlotRef, player: Player | undefined, tag: string) => (
+    <button
+      key={`${ref.group}-${ref.row}-${ref.col}`}
+      className={`spot${same(picked, ref) ? ' spot--picked' : ''}${player ? '' : ' spot--empty'}`}
+      onClick={() => tap(ref, !!player)}
+      aria-pressed={same(picked, ref)}
+    >
+      <span className="spot__tag">{tag}</span>
+      <span className="spot__name">{player?.name ?? 'Empty'}</span>
+    </button>
+  );
+
+  const rows = (group: 'forwards' | 'defence', label: string) =>
+    lineup[group].map((row, r) => (
+      <div className="editor__row" key={`${group}-${r}`}>
+        <span className="editor__label">
+          {label}
+          {r + 1}
+        </span>
+        {row.map((p, c) => spot({ group, row: r, col: c }, p, SPOT_TAGS[group][c]))}
+      </div>
+    ));
+
+  if (!open) {
+    return (
+      <button className="btn btn--ghost editor__open" onClick={() => setOpen(true)}>
+        ✏️ Edit lines{edited ? ' (edited)' : ''}
+      </button>
+    );
+  }
+
+  return (
+    <div className="editor">
+      <p className="muted small">
+        {picked ? 'Now tap where they should go.' : 'Tap a player, then tap another spot to swap them.'}
+      </p>
+      {lineup.forwards.length > 0 && <p className="editor__heading">Forwards</p>}
+      {rows('forwards', 'L')}
+      {lineup.defence.length > 0 && <p className="editor__heading">Defence</p>}
+      {rows('defence', 'D')}
+      <p className="editor__heading">Goalies</p>
+      <div className="editor__row">
+        <span className="editor__label">G</span>
+        {lineup.goalies.map((p, c) => spot({ group: 'goalies', row: 0, col: c }, p, SPOT_TAGS.goalies[c]))}
+      </div>
+      {(lineup.spares.length > 0 || (picked && picked.group !== 'spares')) && (
+        <>
+          <p className="editor__heading">Spares</p>
+          <div className="editor__spares">
+            {lineup.spares.map((p, c) => spot({ group: 'spares', row: 0, col: c }, p, 'Spare'))}
+            {picked && picked.group !== 'spares' && (
+              <button
+                className="spot spot--add"
+                onClick={() => tap({ group: 'spares', row: 0, col: lineup.spares.length }, false)}
+              >
+                <span className="spot__name">Move to spares</span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
+      <div className="split__actions">
+        {edited && (
+          <button className="btn btn--ghost" onClick={onReset}>
+            Reset to suggested lines
+          </button>
+        )}
+        <button
+          className="btn btn--ghost"
+          onClick={() => {
+            setPicked(null);
+            setOpen(false);
+          }}
+        >
+          Done
+        </button>
+      </div>
+    </div>
   );
 }

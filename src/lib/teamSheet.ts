@@ -171,7 +171,7 @@ export const drawTeamSheet = async (lineup: Lineup, details: GameDetails): Promi
     defenceRows.forEach(r => row(r.label, r.slots));
   }
   section('GOALIES');
-  if (lineup.goalies.length) {
+  if (lineup.goalies.some(Boolean)) {
     row(goalieRow.label, goalieRow.slots);
   } else {
     ctx.fillStyle = '#ffb347';
