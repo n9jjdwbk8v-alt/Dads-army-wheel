@@ -30,19 +30,31 @@
   box-sizing: border-box;
 }
 
+/* App feel: the page itself never moves or bounces; the app scrolls inside #root, with no scroll bar and no
+   rubber-band stretch past the top or bottom. */
 html,
-body,
-#root {
+body {
+  height: 100%;
   margin: 0;
-  min-height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
-  min-height: 100vh;
   background: #0c120a;
-  /* App feel: no grey flash on taps or rubber-band reveal of the page edge. */
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
+}
+
+#root {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  scrollbar-width: none;
+}
+
+#root::-webkit-scrollbar {
+  display: none;
 }
 
 button {

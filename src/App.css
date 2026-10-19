@@ -589,8 +589,14 @@
   padding: 6px 6px 10px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  /* Snap inside the padding, so the picked style's outline isn't cut off at the edge. */
+  scroll-padding-inline: 6px;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+}
+
+.thumbs::-webkit-scrollbar {
+  display: none;
 }
 
 .thumb {
