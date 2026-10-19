@@ -8,9 +8,7 @@ import Backup from './components/Backup';
 import TeamsView from './components/TeamsView';
 import GameDay from './components/GameDay';
 import Fees from './components/Fees';
-import TeamSync from './components/TeamSync';
 import InstallTip from './components/InstallTip';
-import { useTeamSync } from './components/useTeamSync';
 import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
 import { NEW_FEES, readFees, type FeesState } from './lib/fees';
 import { NO_TEAMS, recordGame, todayKey, type GameRecord, type Player, type Teams } from './lib/teams';
@@ -22,19 +20,9 @@ type Tab = 'roster' | 'teams' | 'fees' | 'gameday';
 
 const TABS: Tab[] = ['roster', 'teams', 'fees', 'gameday'];
 
-// Links can open a tab (?tab=fees, used by the Home Screen shortcuts) or invite a phone to a team (?team=CODE).
+// Links can open a tab (?tab=fees), as the Home Screen shortcuts do.
 const launch = new URLSearchParams(location.search);
 const launchTab = TABS.find(t => t === launch.get('tab'));
-const invite = launch.get('team') ?? undefined;
-
-const FOOT: Record<ReturnType<typeof useTeamSync>['status'], string> = {
-  off: 'Saved on this device',
-  saving: 'Saving online…',
-  saved: 'Saved online',
-  offline: 'Offline · saved on this phone',
-  unavailable: 'Saved on this device',
-  error: 'Saved on this phone · retrying online'
-};
 
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);
@@ -42,15 +30,7 @@ export default function App() {
   const [history, setHistory] = usePersistentState<GameRecord[]>('dads-army:history', []);
   const [gameDay, setGameDay] = usePersistentState<GameDayState>('dads-army:gameday', NEW_GAME_DAY);
   const [fees, setFees] = usePersistentState<FeesState>('dads-army:fees', NEW_FEES, readFees);
-  const [tab, setTab] = useState<Tab>(() => (invite ? 'roster' : (launchTab ?? (teams.light.length ? 'teams' : 'roster'))));
-
-  const team = useTeamSync({
-    players: { value: players, set: setPlayers },
-    history: { value: history, set: setHistory },
-    teams: { value: teams, set: setTeams },
-    gameDay: { value: gameDay, set: setGameDay },
-    fees: { value: fees, set: setFees }
-  });
+  const [tab, setTab] = useState<Tab>(() => launchTab ?? (teams.light.length ? 'teams' : 'roster'));
 
   // Tidy the launch link away once it's been read, so a refresh doesn't repeat it.
   useEffect(() => {
@@ -100,7 +80,6 @@ export default function App() {
 
         {tab === 'roster' && (
           <Roster players={players} setPlayers={setPlayers}>
-            <TeamSync team={team} playerCount={players.length} invite={invite} />
             <Backup players={players} history={history} fees={fees} onRestore={restore} />
           </Roster>
         )}
@@ -113,10 +92,7 @@ export default function App() {
 
       <InstallTip />
 
-      <footer className="foot">
-        {FOOT[team.status]}
-        {team.sync.code ? ` · ${team.sync.code}` : ''} · Lights vs Darks
-      </footer>
+      <footer className="foot">Saved on this device · Lights vs Darks</footer>
     </ClickSpark>
   );
 }

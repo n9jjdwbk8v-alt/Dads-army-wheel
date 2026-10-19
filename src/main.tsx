@@ -12,6 +12,10 @@ if ('serviceWorker' in navigator && import.meta.env.PROD && window.top === windo
   });
 }
 
+// Ask the browser to keep this site's saved roster, history and fees rather than clearing them when the phone
+// runs low on space. Installed (Home Screen) apps usually get this automatically.
+navigator.storage?.persist?.().catch(() => {});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

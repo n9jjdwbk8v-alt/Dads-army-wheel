@@ -1,6 +1,6 @@
 // Dads Army offline support: the app opens with no signal (e.g. at the rink) from what it last downloaded.
 // Pages load fresh when online so updates arrive straight away; the hashed build files and fonts come from the
-// cache. Team saves (/api/) always go to the network.
+// cache.
 const CACHE = 'dads-army-v1';
 const SHELL = ['./', './logo.png', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png', './favicon-48.png'];
 
@@ -30,7 +30,6 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
   const sameOrigin = url.origin === self.location.origin;
-  if (sameOrigin && url.pathname.includes('/api/')) return;
 
   // The page itself: the newest from the network, or the last one saved when offline.
   if (request.mode === 'navigate') {
