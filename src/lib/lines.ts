@@ -1,6 +1,7 @@
 import { isGoalie, type Player, type Position } from './teams';
 
-export const positionOf = (p: Player): Position => p.position ?? (isGoalie(p) ? 'G' : 'F');
+/** Goalies are the players rated 0; skaters are forwards unless marked as defence. */
+export const positionOf = (p: Player): Position => (isGoalie(p) ? 'G' : p.position === 'D' ? 'D' : 'F');
 
 export type LineStyle = 'stacked' | 'balanced' | 'mixed';
 

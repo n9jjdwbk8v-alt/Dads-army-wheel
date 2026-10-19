@@ -10,7 +10,7 @@ A team picker for the Dads Army ice hockey team. It instantly splits whoever tur
 
 **Game day** is for matches against other clubs and scrimmages, using the same roster:
 
-- **Squad** – choose *Game* (titled "Team sheet") or *Scrimmage*, add the opponent, date, face-off time and rink, then tick who's available and set each player's position: forward, defence or goalie (goalies rated 0 start as G).
+- **Squad** – choose *Game* (titled "Team sheet") or *Scrimmage*, add the opponent, date, face-off time and rink, then tick who's available and set each player's position: forward, defence or goalie (a goalie is a player rated 0, so choosing G sets their skill to 0).
 - **Lines** – pick a style: *Stacked* (best players together on line 1), *Balanced* (lines about equally strong) or *Mixed pairs* (each line has one stronger player with less experienced ones). The app builds forward lines of three (the best in each at centre), defence pairs, a starting goalie and backup, and lists anyone left over as spares (`src/lib/lines.ts`). **Edit lines** lets you place people yourself: tap a player, then another spot, to swap them (or move someone to an empty spot or the spares). Hand edits are kept until you reset them, pick another style, or change the squad. The team sheet is drawn as a picture to send to WhatsApp, or copied as text (`src/lib/teamSheet.ts`).
 
 **Backup** (bottom of the Roster tab) saves the roster and recent games as a JSON file via the share sheet or a download, and **Restore** loads one back.

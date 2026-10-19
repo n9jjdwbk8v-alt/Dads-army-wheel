@@ -64,8 +64,16 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
 
   const toggle = (id: string, on: boolean) =>
     set({ available: on ? [...gameDay.available, id] : gameDay.available.filter(x => x !== id) });
+  // A goalie is a player rated 0, so choosing G sets their skill to 0, and moving a goalie to F or D gives them
+  // a middling 5 to start from (adjustable on the Roster).
   const setPosition = (id: string, position: Position) =>
-    setPlayers(ps => ps.map(p => (p.id === id ? { ...p, position } : p)));
+    setPlayers(ps =>
+      ps.map(p => {
+        if (p.id !== id) return p;
+        if (position === 'G') return { ...p, skill: 0, position: undefined };
+        return { ...p, position, skill: p.skill === 0 ? 5 : p.skill };
+      })
+    );
 
   // Hand-placed lines win while the squad and style are unchanged; otherwise show the suggestion.
   const currentSquad = squadKey(squad, gameDay.style);
@@ -167,7 +175,7 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
                 </button>
               </div>
             </div>
-            <p className="muted small">Tick who's available and set each player's position.</p>
+            <p className="muted small">Tick who's available and set each player's position. Goalies are the players rated 0.</p>
             {players.length === 0 ? (
               <p className="empty">Add players on the Roster tab first.</p>
             ) : (

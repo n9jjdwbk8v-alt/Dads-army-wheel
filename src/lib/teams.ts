@@ -6,7 +6,7 @@ export type Player = {
   name: string;
   skill: number;
   here: boolean;
-  /** Set on the Game day squad sheet; until then goalies (skill 0) count as G and everyone else as F. */
+  /** A skater's position, set on the Game day squad sheet (forward unless set). Goalies are always skill 0. */
   position?: Position;
 };
 
