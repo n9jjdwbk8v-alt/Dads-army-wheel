@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import RubberSegment from './reactbits/RubberSegment';
 import SpringCheck from './reactbits/SpringCheck';
 import { useRendered } from './useRendered';
@@ -16,7 +16,15 @@ import {
   type SlotRef
 } from '../lib/lines';
 import { copyText, download, shareOrDownload } from '../lib/share';
-import { detailsLine, drawTeamSheet, sheetTitle, type GameDetails, type SheetKind } from '../lib/teamSheet';
+import {
+  bySurname,
+  drawLinesSheet,
+  drawSquadSheet,
+  sheetInfo,
+  sheetTitle,
+  type GameDetails,
+  type SheetKind
+} from '../lib/teamSheet';
 import type { Player, Position } from '../lib/teams';
 
 type GameDayProps = {
@@ -32,10 +40,22 @@ const POSITIONS: { value: Position; label: string; title: string }[] = [
   { value: 'G', label: 'G', title: 'Goalie' }
 ];
 
-const sheetText = (lineup: Lineup, details: GameDetails) => {
-  const lines = [`🏒 Dads Army — ${sheetTitle(details.kind)}`];
-  const info = [details.opponent.trim() && `vs ${details.opponent.trim()}`, detailsLine(details)].filter(Boolean);
-  if (info.length) lines.push(info.join(' · '));
+const textHeader = (details: GameDetails) => {
+  const info = sheetInfo(details);
+  return [`🏒 Dads Army — ${sheetTitle(details.kind).join(' ')}`, ...(info.length ? [info.join(' · ')] : [])];
+};
+
+const squadText = (skaters: Player[], goalies: Player[], details: GameDetails) =>
+  [
+    ...textHeader(details),
+    '',
+    ...[...skaters].sort(bySurname).map(p => p.name),
+    '',
+    `${goalies.length > 1 ? 'NETMINDERS' : 'NETMINDER'}: ${goalies.map(g => g.name).join(', ') || 'to be confirmed'}`
+  ].join('\n');
+
+const linesText = (lineup: Lineup, details: GameDetails) => {
+  const lines = textHeader(details);
   if (lineup.forwards.length) {
     lines.push('', 'FORWARDS');
     lineup.forwards.forEach((line, i) =>
@@ -52,9 +72,10 @@ const sheetText = (lineup: Lineup, details: GameDetails) => {
   return lines.join('\n');
 };
 
+type Sheet = 'squad' | 'sheet' | 'lines';
+
 export default function GameDay({ players, setPlayers, gameDay, setGameDay }: GameDayProps) {
-  const [sheet, setSheet] = useState<'squad' | 'lines'>(() => (gameDay.available.length ? 'lines' : 'squad'));
-  const [copied, setCopied] = useState(false);
+  const [sheet, setSheet] = useState<Sheet>(() => (gameDay.available.length ? 'sheet' : 'squad'));
 
   const set = (patch: Partial<GameDayState>) => setGameDay(g => ({ ...g, ...patch }));
   const available = new Set(gameDay.available);
@@ -81,18 +102,9 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
   const lineup = edited ? fromSlots(gameDay.manual!.slots, squad) : buildLineup(squad, gameDay.style);
   const saveSlots = (slots: LineSlots) => set({ manual: { key: currentSquad, slots } });
   const details: GameDetails = gameDay;
-  // Re-draw whenever anything on the sheet changes.
-  const key = JSON.stringify([lineup, details.kind, details.opponent, details.date, details.time, details.venue]);
-  const picture = useRendered(key, sheet === 'lines' && squad.length > 0, () => drawTeamSheet(lineup, details));
-  const current = picture?.key === key ? picture : null;
-  const file = () => current && new File([current.blob], 'dads-army-team-sheet.png', { type: 'image/png' });
-
-  const copy = async () => {
-    if (await copyText(sheetText(lineup, details))) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1800);
-    }
-  };
+  const skaters = squad.filter(p => positionOf(p) !== 'G');
+  const goalies = squad.filter(p => positionOf(p) === 'G');
+  const detailsKey = [details.kind, details.opponent, details.date, details.time, details.venue];
 
   return (
     <section className="gameday">
@@ -100,10 +112,11 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
         <RubberSegment
           items={[
             { value: 'squad', label: `Squad (${squad.length})` },
+            { value: 'sheet', label: 'Team sheet' },
             { value: 'lines', label: 'Lines' }
           ]}
           value={sheet}
-          onChange={v => setSheet(v as 'squad' | 'lines')}
+          onChange={v => setSheet(v as Sheet)}
           size="sm"
           trackColor="#e3f3e9"
           thumbColor="#0f5132"
@@ -130,12 +143,12 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
               aria-label="Game or scrimmage"
             />
             <label className="field">
-              <span>Opponent</span>
+              <span>{gameDay.kind === 'game' ? 'Opponent' : 'Name'}</span>
               <input
                 className="text-input"
                 value={gameDay.opponent}
                 onChange={e => set({ opponent: e.target.value })}
-                placeholder={gameDay.kind === 'game' ? 'e.g. Ice Wolves' : 'Optional'}
+                placeholder={gameDay.kind === 'game' ? 'e.g. Ice Wolves' : 'e.g. Scrimmage Two'}
                 maxLength={40}
               />
             </label>
@@ -216,74 +229,58 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
                 })}
               </ul>
             )}
-            <button className="btn btn--primary gameday__next" onClick={() => setSheet('lines')} disabled={!squad.length}>
-              Suggest lines →
+            <button className="btn btn--primary gameday__next" onClick={() => setSheet('sheet')} disabled={!squad.length}>
+              See team sheet →
             </button>
           </div>
         </>
-      ) : (
-        <div className="panel graphic">
-          {!squad.length ? (
-            <p className="empty">Tick who's available on the Squad sheet first.</p>
-          ) : (
-            <>
-              <p className="graphic__label">Line style</p>
-              <div className="chips" role="radiogroup" aria-label="Line style">
-                {LINE_STYLES.map(s => (
-                  <button
-                    key={s.value}
-                    role="radio"
-                    aria-checked={gameDay.style === s.value}
-                    className={gameDay.style === s.value ? 'chip chip--on' : 'chip'}
-                    onClick={() => set({ style: s.value, manual: undefined })}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <p className="muted small">{LINE_STYLES.find(s => s.value === gameDay.style)?.hint}</p>
-              <p className="gameday__summary">
-                {lineup.forwards.length} line{lineup.forwards.length === 1 ? '' : 's'} · {lineup.defence.length} D pair
-                {lineup.defence.length === 1 ? '' : 's'} ·{' '}
-                {lineup.goalies.some(Boolean) ? `${lineup.goalies.filter(Boolean).length} G` : 'no goalie'}
-                {lineup.spares.length ? ` · ${lineup.spares.length} spare${lineup.spares.length === 1 ? '' : 's'}` : ''}
-              </p>
-              <LineEditor lineup={lineup} edited={edited} onChange={saveSlots} onReset={() => set({ manual: undefined })} />
-              {picture && (
-                <img
-                  src={picture.url}
-                  alt={`${sheetTitle(gameDay.kind)} for ${squad.length} players`}
-                  className={current ? 'graphic__img' : 'graphic__img graphic__img--updating'}
-                />
-              )}
-              <button
-                className="btn btn--primary btn--whatsapp"
-                onClick={() => {
-                  const f = file();
-                  if (f) shareOrDownload(f);
-                }}
-                disabled={!current}
-              >
-                Send to WhatsApp
-              </button>
-              <div className="split__actions">
-                <button
-                  className="btn btn--ghost"
-                  onClick={() => {
-                    const f = file();
-                    if (f) download(f);
-                  }}
-                  disabled={!current}
-                >
-                  Download image
-                </button>
-                <button className="btn btn--ghost" onClick={copy}>
-                  {copied ? 'Copied!' : 'Copy as text'}
-                </button>
-              </div>
-            </>
-          )}
+      ) : !squad.length ? (
+        <div className="panel">
+          <p className="empty">Tick who's available on the Squad sheet first.</p>
         </div>
+      ) : sheet === 'sheet' ? (
+        <SharePanel
+          drawKey={JSON.stringify(['squad', skaters, goalies, ...detailsKey])}
+          draw={() => drawSquadSheet(details, skaters, goalies)}
+          text={() => squadText(skaters, goalies, details)}
+          fileName="dads-army-team-sheet.png"
+          alt={`${sheetTitle(gameDay.kind).join(' ')} for ${squad.length} players`}
+        >
+          <p className="gameday__summary">
+            {skaters.length} skater{skaters.length === 1 ? '' : 's'} · {goalies.length ? `${goalies.length} netminder${goalies.length === 1 ? '' : 's'}` : 'no netminder yet'}
+          </p>
+        </SharePanel>
+      ) : (
+        <SharePanel
+          drawKey={JSON.stringify(['lines', lineup, ...detailsKey])}
+          draw={() => drawLinesSheet(details, lineup)}
+          text={() => linesText(lineup, details)}
+          fileName="dads-army-lines.png"
+          alt={`Lines for ${squad.length} players`}
+        >
+          <p className="graphic__label">Line style</p>
+          <div className="chips" role="radiogroup" aria-label="Line style">
+            {LINE_STYLES.map(s => (
+              <button
+                key={s.value}
+                role="radio"
+                aria-checked={gameDay.style === s.value}
+                className={gameDay.style === s.value ? 'chip chip--on' : 'chip'}
+                onClick={() => set({ style: s.value, manual: undefined })}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+          <p className="muted small">{LINE_STYLES.find(s => s.value === gameDay.style)?.hint}</p>
+          <p className="gameday__summary">
+            {lineup.forwards.length} line{lineup.forwards.length === 1 ? '' : 's'} · {lineup.defence.length} D pair
+            {lineup.defence.length === 1 ? '' : 's'} ·{' '}
+            {lineup.goalies.some(Boolean) ? `${lineup.goalies.filter(Boolean).length} G` : 'no goalie'}
+            {lineup.spares.length ? ` · ${lineup.spares.length} spare${lineup.spares.length === 1 ? '' : 's'}` : ''}
+          </p>
+          <LineEditor lineup={lineup} edited={edited} onChange={saveSlots} onReset={() => set({ manual: undefined })} />
+        </SharePanel>
       )}
     </section>
   );
@@ -389,6 +386,65 @@ function LineEditor({ lineup, edited, onChange, onReset }: LineEditorProps) {
           }}
         >
           Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type SharePanelProps = {
+  /** Changes whenever the picture needs re-drawing. */
+  drawKey: string;
+  draw: () => Promise<Blob>;
+  text: () => string;
+  fileName: string;
+  alt: string;
+  children?: ReactNode;
+};
+
+/** Controls, then the drawn sheet with Send, Download and Copy as text. */
+function SharePanel({ drawKey, draw, text, fileName, alt, children }: SharePanelProps) {
+  const [copied, setCopied] = useState(false);
+  const picture = useRendered(drawKey, true, draw);
+  const current = picture?.key === drawKey ? picture : null;
+  const file = () => current && new File([current.blob], fileName, { type: 'image/png' });
+
+  const copy = async () => {
+    if (await copyText(text())) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    }
+  };
+
+  return (
+    <div className="panel graphic">
+      {children}
+      {picture && (
+        <img src={picture.url} alt={alt} className={current ? 'graphic__img' : 'graphic__img graphic__img--updating'} />
+      )}
+      <button
+        className="btn btn--primary btn--whatsapp"
+        onClick={() => {
+          const f = file();
+          if (f) shareOrDownload(f);
+        }}
+        disabled={!current}
+      >
+        Send to WhatsApp
+      </button>
+      <div className="split__actions">
+        <button
+          className="btn btn--ghost"
+          onClick={() => {
+            const f = file();
+            if (f) download(f);
+          }}
+          disabled={!current}
+        >
+          Download image
+        </button>
+        <button className="btn btn--ghost" onClick={copy}>
+          {copied ? 'Copied!' : 'Copy as text'}
         </button>
       </div>
     </div>

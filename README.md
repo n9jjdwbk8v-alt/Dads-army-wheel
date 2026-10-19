@@ -10,8 +10,11 @@ A team picker for the Dads Army ice hockey team. It instantly splits whoever tur
 
 **Game day** is for matches against other clubs and scrimmages, using the same roster:
 
-- **Squad** – choose *Game* (titled "Team sheet") or *Scrimmage*, add the opponent, date, face-off time and rink, then tick who's available and set each player's position: forward, defence or goalie (a goalie is a player rated 0, so choosing G sets their skill to 0).
-- **Lines** – pick a style: *Stacked* (best players together on line 1), *Balanced* (lines about equally strong) or *Mixed pairs* (each line has one stronger player with less experienced ones). The app builds forward lines of three (the best in each at centre), defence pairs, a starting goalie and backup, and lists anyone left over as spares (`src/lib/lines.ts`). **Edit lines** lets you place people yourself: tap a player, then another spot, to swap them (or move someone to an empty spot or the spares). Hand edits are kept until you reset them, pick another style, or change the squad. The team sheet is drawn as a picture to send to WhatsApp, or copied as text (`src/lib/teamSheet.ts`).
+- **Squad** – choose *Game* or *Scrimmage*, add the opponent (or the scrimmage's name), date, face-off time and rink, then tick who's available and set each player's position: forward, defence or goalie (a goalie is a player rated 0, so choosing G sets their skill to 0).
+- **Team sheet** – the squad drawn in the club's sheet design ("TEAM SHEET" or "SCRIMMAGE SQUAD"): skaters listed by surname (ranks like "Corporal" are skipped when sorting), goalies under a torn NETMINDER label, details top right in military time, and on scrimmages the court-martial note (`src/lib/teamSheet.ts`).
+- **Lines** – the same design split into lines. Pick *Stacked*, *Balanced* or *Mixed pairs*; forward lines and reserves run down the left and defence pairs sit on the right (`src/lib/lines.ts`). **Edit lines** lets you place people yourself: tap a player, then another spot, to swap them. Hand edits are kept until you reset them, pick another style, or change the squad.
+
+Both sheets can be sent to WhatsApp, downloaded or copied as text.
 
 **Backup** (bottom of the Roster tab) saves the roster and recent games as a JSON file via the share sheet or a download, and **Restore** loads one back.
 

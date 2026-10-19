@@ -1,8 +1,9 @@
-export type CamoKind = 'woodland' | 'digital';
+/** Woodland greens for the website; stone is the grey-green camo around the team sheet. */
+export type CamoKind = 'woodland' | 'stone';
 
 export const CAMO_PALETTES: Record<CamoKind, string[]> = {
   woodland: ['#12170d', '#25311a', '#3c4d25', '#5a6b33'],
-  digital: ['#1b2215', '#2f3c24', '#4d5c35', '#7c8460']
+  stone: ['#2b3025', '#565d48', '#7f8670', '#adb19e']
 };
 
 /** Small seeded PRNG so patterns look the same every time. */
@@ -40,13 +41,13 @@ export const camoTile = (kind: CamoKind): HTMLCanvasElement => {
   if (cached) return cached;
 
   const size = 480;
-  const cell = kind === 'digital' ? 8 : 2;
+  const cell = 2;
   const grid = size / cell;
-  const rand = mulberry32(kind === 'digital' ? 1944 : 1918);
+  const rand = mulberry32(kind === 'stone' ? 1940 : 1918);
   const octaves = [periodicNoise(rand, 3), periodicNoise(rand, 6), periodicNoise(rand, 12)];
   // Woodland's black "branches": thin bands where a second noise field crosses its midpoint.
   const branches = periodicNoise(rand, 4);
-  const weights = kind === 'digital' ? [0.5, 0.3, 0.2] : [0.6, 0.3, 0.1];
+  const weights = kind === 'stone' ? [0.55, 0.3, 0.15] : [0.6, 0.3, 0.1];
   const palette = CAMO_PALETTES[kind];
   // Thresholds split the noise into four roughly even bands of colour.
   const cuts = [0.4, 0.5, 0.6];
