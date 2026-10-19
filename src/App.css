@@ -376,6 +376,17 @@
   cursor: pointer;
 }
 
+.chip__tag {
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--green-800);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .chip--on {
   background: var(--green-800);
   border-color: var(--green-800);

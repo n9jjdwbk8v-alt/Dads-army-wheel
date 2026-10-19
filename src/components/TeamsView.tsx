@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
 import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
-import { drawTeamsGraphic, GRAPHIC_DESIGNS, type GraphicDesign } from '../lib/teamGraphic';
+import { drawTeamsGraphic, makeTeamsGif, GRAPHIC_DESIGNS, type GraphicDesign } from '../lib/teamGraphic';
 import { usePersistentState } from '../lib/storage';
 
 type TeamsViewProps = {
@@ -68,10 +68,11 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
   const ready = hasTeams && !stale;
   const key = `${idsKey(teams.light)}|${idsKey(teams.dark)}|${design}`;
 
-  const picture = useRendered(key, ready, () => drawTeamsGraphic(teams, design));
+  const animated = GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
+  const picture = useRendered(key, ready, () => (animated ? makeTeamsGif : drawTeamsGraphic)(teams, design));
   // Only share a picture made for the teams and style currently chosen; an older one is just a placeholder.
   const shareable = ready && picture?.key === key ? picture : null;
-  const fileName = 'dads-army-teams.png';
+  const fileName = `dads-army-teams.${animated ? 'gif' : 'png'}`;
 
   const download = () => {
     if (!shareable) return;
@@ -83,7 +84,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
 
   const shareImage = async () => {
     if (!shareable) return;
-    const file = new File([shareable.blob], fileName, { type: 'image/png' });
+    const file = new File([shareable.blob], fileName, { type: shareable.blob.type });
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file] });
@@ -146,6 +147,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
                 onClick={() => setDesign(d.value)}
               >
                 {d.label}
+                {d.animated && <span className="chip__tag">GIF</span>}
               </button>
             ))}
           </div>
@@ -155,12 +157,12 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
             className={shareable ? 'graphic__img' : 'graphic__img graphic__img--updating'}
           />
           <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!shareable}>
-            Send to WhatsApp
+            {shareable || !animated ? 'Send to WhatsApp' : 'Making GIF…'}
           </button>
           <p className="muted small">Tip: on a phone you can also press and hold the picture to save or share it.</p>
           <div className="split__actions">
             <button className="btn btn--ghost" onClick={download} disabled={!shareable}>
-              Download image
+              Download {animated ? 'GIF' : 'image'}
             </button>
             <button className="btn btn--ghost" onClick={copyText}>
               {copied ? 'Copied!' : 'Copy as text'}

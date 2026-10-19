@@ -32,14 +32,25 @@ const STENCIL = '"Black Ops One", "Barlow Condensed", sans-serif';
 const TYPEWRITER = '"Special Elite", "Courier New", monospace';
 const MONO = '"Share Tech Mono", "Courier New", monospace';
 const BODY = 'Inter, system-ui, sans-serif';
+const MARKER = '"Permanent Marker", "Comic Sans MS", cursive';
+const HAND = '"Gochi Hand", "Comic Sans MS", cursive';
+const MASTHEAD = '"Playfair Display", Georgia, serif';
+const SERIF = '"Libre Baskerville", Georgia, serif';
 
 export const FONT_LOADS = [
   `800 100px ${DISPLAY}`,
+  `700 40px ${DISPLAY}`,
   `600 40px ${DISPLAY}`,
   `60px ${STENCIL}`,
   `40px ${TYPEWRITER}`,
   `40px ${MONO}`,
-  `500 40px ${BODY}`
+  `500 40px ${BODY}`,
+  `600 40px ${BODY}`,
+  `60px ${MARKER}`,
+  `40px ${HAND}`,
+  `italic 900 60px ${MASTHEAD}`,
+  `40px ${SERIF}`,
+  `700 40px ${SERIF}`
 ];
 
 type Side = {
@@ -54,15 +65,18 @@ export type Theme = {
   label: string;
   /** Paints everything static: both halves and the header band. */
   background: (ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) => void;
-  /** Drawn on top of everything else (stamps, scanlines, HUD). */
-  overlay?: (ctx: CanvasRenderingContext2D) => void;
+  /** Drawn on top of everything else (stamps, scanlines, HUD). `t` is the animation time; 1 for a still. */
+  overlay?: (ctx: CanvasRenderingContext2D, t: number) => void;
   headerTitle: string;
   headerDate: string;
   headerFont: (px: number) => string;
+  /** Header text colours; white by default. */
+  headerText?: string;
+  headerSub?: string;
   rule: [string, string];
   lights: Side;
   darks: Side;
-  slash: { kind: 'line' | 'glow'; color: string; width: number };
+  slash: { kind: 'line' | 'glow' | 'chalk'; color: string; width: number };
   vs: { fill: string; ring: string; text: string };
   goalie: { fill: string; text: string };
   titleFont: (px: number) => string;
@@ -70,6 +84,10 @@ export type Theme = {
   nameFont: (px: number) => string;
   pillRadius: number;
   tintLogo?: string;
+  /** Re-draws the picture as a dot-matrix board, one LED per `cell` pixels. */
+  led?: { cell: number };
+  /** Shared as a looping GIF rather than a still. */
+  animated?: boolean;
 };
 
 /** A tile of fine random grain, used to give flat colour some texture. */
@@ -99,6 +117,8 @@ const clipped = (ctx: CanvasRenderingContext2D, shape: (c: CanvasRenderingContex
   draw();
   ctx.restore();
 };
+
+const PAD_RULE = 50;
 
 const headerBand = (ctx: CanvasRenderingContext2D, fill: string) => {
   ctx.fillStyle = fill;
@@ -399,16 +419,328 @@ const nightVision: Theme = {
   tintLogo: NV
 };
 
-export type GraphicDesign = 'rink' | 'matchday' | 'dossier' | 'nightvision';
+// ---------- Chalkboard: the coach's tactics board ----------
+
+/** A slightly wobbly chalk stroke: the same path drawn a few times with jitter. */
+const chalkPath = (ctx: CanvasRenderingContext2D, rand: () => number, points: [number, number][], width: number, color: string) => {
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let pass = 0; pass < 3; pass++) {
+    ctx.lineWidth = width * (0.5 + rand() * 0.5);
+    ctx.beginPath();
+    points.forEach(([x, y], i) => {
+      const jx = x + (rand() - 0.5) * 4;
+      const jy = y + (rand() - 0.5) * 4;
+      if (i === 0) ctx.moveTo(jx, jy);
+      else ctx.lineTo(jx, jy);
+    });
+    ctx.stroke();
+  }
+};
+
+const circlePoints = (cx: number, cy: number, r: number, steps = 40): [number, number][] =>
+  Array.from({ length: steps + 1 }, (_, i) => {
+    const a = (i / steps) * Math.PI * 2;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  });
+
+const chalkboard: Theme = {
+  label: 'Chalkboard',
+  background: ctx => {
+    ctx.fillStyle = '#1f3a2a';
+    ctx.fillRect(0, 0, W, H);
+    const rand = mulberry32(21);
+    // Half-rubbed-out chalk smudges.
+    for (let i = 0; i < 18; i++) {
+      const x = rand() * W;
+      const y = HEADER + rand() * (H - HEADER);
+      const r = 150 + rand() * 260;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(255, 255, 255, 0.06)');
+      g.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+    clipped(ctx, darksShape, () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.16)';
+      ctx.fillRect(0, 0, W, H);
+    });
+    // Faint old tactics: a rink outline, X's and O's and arrows.
+    const faint = 'rgba(255, 255, 255, 0.13)';
+    const mid = HEADER + (H - HEADER) / 2;
+    const rink: [number, number][] = [
+      [120, HEADER + 40], [W - 120, HEADER + 40], [W - 50, HEADER + 120], [W - 50, H - 120], [W - 120, H - 40],
+      [120, H - 40], [50, H - 120], [50, HEADER + 120], [120, HEADER + 40]
+    ];
+    chalkPath(ctx, rand, rink, 5, faint);
+    chalkPath(ctx, rand, [[50, mid], [W - 50, mid]], 4, faint);
+    chalkPath(ctx, rand, circlePoints(W / 2, mid, 120), 4, faint);
+    for (const [x, y] of [[180, H - 330], [320, H - 230], [230, H - 140]]) {
+      chalkPath(ctx, rand, [[x - 22, y - 22], [x + 22, y + 22]], 6, faint);
+      chalkPath(ctx, rand, [[x + 22, y - 22], [x - 22, y + 22]], 6, faint);
+    }
+    for (const [x, y] of [[W - 200, H - 320], [W - 330, H - 210], [W - 180, H - 150]]) {
+      chalkPath(ctx, rand, circlePoints(x, y, 24, 16), 6, faint);
+    }
+    chalkPath(ctx, rand, [[360, H - 260], [460, H - 330], [580, H - 340], [660, H - 300]], 4, faint);
+    chalkPath(ctx, rand, [[640, H - 322], [662, H - 300], [634, H - 286]], 4, faint);
+    fillPattern(ctx, grain(30, 13));
+    // Wooden frame along the top.
+    headerBand(ctx, '#3a2716');
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.lineWidth = 2;
+    for (let y = 12; y < HEADER; y += 17) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.bezierCurveTo(W * 0.3, y + 6, W * 0.6, y - 6, W, y + 3);
+      ctx.stroke();
+    }
+  },
+  // A light dusting of grain over the writing so it reads as chalk.
+  overlay: ctx => {
+    ctx.globalAlpha = 0.45;
+    fillPattern(ctx, grain(70, 17));
+    ctx.globalAlpha = 1;
+  },
+  headerTitle: 'LIGHTS VS DARKS',
+  headerDate: "TONIGHT'S LINE-UP",
+  headerFont: px => `${px}px ${MARKER}`,
+  headerSub: '#e9d7b4',
+  rule: ['#c9a26b', '#2a1b0e'],
+  lights: { title: '#ffffff', sub: 'rgba(255, 255, 255, 0.75)', pill: 'rgba(255, 255, 255, 0.06)', pillText: '#f6f6ef', pillStroke: 'rgba(255, 255, 255, 0.3)' },
+  darks: { title: '#f4e285', sub: 'rgba(244, 226, 133, 0.8)', pill: 'rgba(244, 226, 133, 0.06)', pillText: '#f4e285', pillStroke: 'rgba(244, 226, 133, 0.32)' },
+  slash: { kind: 'chalk', color: 'rgba(255, 255, 255, 0.9)', width: 12 },
+  vs: { fill: '#1f3a2a', ring: '#ffffff', text: '#ffffff' },
+  goalie: { fill: '#f4e285', text: '#1f3a2a' },
+  titleFont: px => `${Math.round(px * 0.92)}px ${MARKER}`,
+  subFont: px => `${px}px ${HAND}`,
+  nameFont: px => `${Math.round(px * 1.08)}px ${HAND}`,
+  pillRadius: 8
+};
+
+// ---------- Back page: the newspaper sports pages ----------
+
+const halftone = (color: string) => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 10;
+  const g = c.getContext('2d')!;
+  g.fillStyle = color;
+  g.beginPath();
+  g.arc(5, 5, 1.6, 0, Math.PI * 2);
+  g.fill();
+  return c;
+};
+
+const PAPER = '#efe9da';
+const INK = '#1b2420';
+
+const backPage: Theme = {
+  label: 'Back page',
+  background: ctx => {
+    ctx.fillStyle = PAPER;
+    ctx.fillRect(0, 0, W, H);
+    fillPattern(ctx, halftone('rgba(0, 0, 0, 0.05)'));
+    clipped(ctx, darksShape, () => {
+      ctx.fillStyle = INK;
+      ctx.fillRect(0, 0, W, H);
+      fillPattern(ctx, halftone('rgba(255, 255, 255, 0.05)'));
+    });
+    fillPattern(ctx, grain(26, 31));
+    // Thin rule under the masthead's top edge, like a printed page.
+    ctx.fillStyle = INK;
+    ctx.fillRect(PAD_RULE, 14, W - PAD_RULE * 2, 3);
+  },
+  overlay: ctx => {
+    ctx.font = `700 22px ${SERIF}`;
+    ctx.letterSpacing = '3px';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#6b6153';
+    ctx.fillText('LATE EDITION', 52, H - 26);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#9d9583';
+    ctx.fillText('PRICE: ONE PINT', W - 52, H - 26);
+  },
+  headerTitle: 'DADS ARMY GAZETTE',
+  headerDate: 'TEAMS ANNOUNCED',
+  headerFont: px => `italic 900 ${px}px ${MASTHEAD}`,
+  headerText: '#111111',
+  headerSub: '#6b6153',
+  rule: ['#111111', PAPER],
+  lights: { title: '#111111', sub: '#6b6153', pill: 'rgba(0, 0, 0, 0.035)', pillText: '#141414', pillStroke: 'rgba(0, 0, 0, 0.35)' },
+  darks: { title: PAPER, sub: '#b8b09c', pill: 'rgba(255, 255, 255, 0.06)', pillText: PAPER, pillStroke: 'rgba(239, 233, 218, 0.35)' },
+  slash: { kind: 'line', color: '#b3261e', width: 10 },
+  vs: { fill: PAPER, ring: '#111111', text: '#111111' },
+  goalie: { fill: '#b3261e', text: '#ffffff' },
+  titleFont: px => `italic 900 ${Math.round(px * 0.95)}px ${MASTHEAD}`,
+  subFont: px => `700 ${Math.round(px * 0.8)}px ${SERIF}`,
+  nameFont: px => `${Math.round(px * 0.88)}px ${SERIF}`,
+  pillRadius: 0
+};
+
+// ---------- Frozen: frosted ice and cracks ----------
+
+/** A frost crystal: a line that splits into smaller branches. */
+const frost = (ctx: CanvasRenderingContext2D, rand: () => number, x: number, y: number, angle: number, len: number, depth: number) => {
+  const x2 = x + Math.cos(angle) * len;
+  const y2 = y + Math.sin(angle) * len;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  if (depth <= 0) return;
+  for (const turn of [-1, 1]) {
+    const at = 0.35 + rand() * 0.45;
+    frost(ctx, rand, x + (x2 - x) * at, y + (y2 - y) * at, angle + turn * (0.9 + rand() * 0.3), len * 0.45, depth - 1);
+  }
+  frost(ctx, rand, x2, y2, angle + (rand() - 0.5) * 0.6, len * 0.7, depth - 1);
+};
+
+const frozen: Theme = {
+  label: 'Frozen',
+  background: ctx => {
+    const ice = ctx.createLinearGradient(0, HEADER, W * 0.6, H);
+    ice.addColorStop(0, '#f6fcff');
+    ice.addColorStop(1, '#cfe8f2');
+    ctx.fillStyle = ice;
+    ctx.fillRect(0, 0, W, H);
+    const rand = mulberry32(41);
+    clipped(ctx, lightsShape, () => {
+      // Frost creeping in from the edges.
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 26; i++) {
+        const edge = rand();
+        const [x, y, a] =
+          edge < 0.45 ? [0, HEADER + rand() * (H - HEADER), (rand() - 0.5) * 1.2]
+          : edge < 0.75 ? [rand() * W * 0.6, H, -Math.PI / 2 + (rand() - 0.5) * 1.2]
+          : [rand() * W * 0.6, HEADER, Math.PI / 2 + (rand() - 0.5) * 1.2];
+        ctx.strokeStyle = rand() < 0.5 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(120, 190, 215, 0.35)';
+        frost(ctx, rand, x, y, a, 80 + rand() * 120, 3);
+      }
+    });
+    clipped(ctx, darksShape, () => {
+      const deep = ctx.createLinearGradient(W, HEADER, W * 0.4, H);
+      deep.addColorStop(0, '#0d4740');
+      deep.addColorStop(1, '#062521');
+      ctx.fillStyle = deep;
+      ctx.fillRect(0, 0, W, H);
+      // Cracks through the ice.
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 9; i++) {
+        let x = SLASH_BOTTOM + rand() * (W - SLASH_BOTTOM);
+        let y = HEADER + rand() * (H - HEADER);
+        ctx.strokeStyle = `rgba(190, 240, 255, ${0.12 + rand() * 0.15})`;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        for (let s = 0; s < 12; s++) {
+          x += (rand() - 0.5) * 90;
+          y += (rand() - 0.3) * 70;
+          ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    });
+    fillPattern(ctx, grain(16, 43));
+    headerBand(ctx, '#05221f');
+  },
+  headerTitle: 'LIGHTS VS DARKS',
+  headerDate: '',
+  headerFont: px => `800 ${Math.round(px * 1.1)}px ${DISPLAY}`,
+  headerSub: '#9fe2ef',
+  rule: ['#e6fbff', '#7fd6e8'],
+  lights: { title: '#0b4f5f', sub: '#3a8ca0', pill: 'rgba(255, 255, 255, 0.62)', pillText: '#0b3d4a', pillStroke: 'rgba(255, 255, 255, 0.95)' },
+  darks: { title: '#e6fbff', sub: '#8fd9e8', pill: 'rgba(230, 251, 255, 0.08)', pillText: '#e6fbff', pillStroke: 'rgba(143, 217, 232, 0.32)' },
+  slash: { kind: 'glow', color: '#bff3ff', width: 10 },
+  vs: { fill: '#e6fbff', ring: '#7fd6e8', text: '#0b4f5f' },
+  goalie: { fill: '#7fd6e8', text: '#05221f' },
+  titleFont: px => `800 ${px}px ${DISPLAY}`,
+  subFont: px => `600 ${px}px ${DISPLAY}`,
+  nameFont: px => `600 ${Math.round(px * 0.95)}px ${BODY}`,
+  pillRadius: 14
+};
+
+// ---------- Jumbotron: an animated arena scoreboard ----------
+
+const AMBER = '#ffcf40';
+
+const jumbotron: Theme = {
+  label: 'Jumbotron',
+  animated: true,
+  led: { cell: 6 },
+  background: ctx => {
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, W, H);
+    clipped(ctx, lightsShape, () => {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
+      ctx.fillRect(0, 0, W, H);
+    });
+    clipped(ctx, darksShape, () => {
+      ctx.fillStyle = 'rgba(61, 255, 110, 0.07)';
+      ctx.fillRect(0, 0, W, H);
+    });
+  },
+  // Chasing bulbs around the edge of the board.
+  overlay: (ctx, t) => {
+    const step = Math.floor(t * 36);
+    const inset = 14;
+    const gap = 27;
+    const points: [number, number][] = [];
+    for (let x = inset; x <= W - inset; x += gap) points.push([x, inset]);
+    for (let y = inset + gap; y <= H - inset; y += gap) points.push([W - inset, y]);
+    for (let x = W - inset - gap; x >= inset; x -= gap) points.push([x, H - inset]);
+    for (let y = H - inset - gap; y > inset; y -= gap) points.push([inset, y]);
+    points.forEach(([x, y], i) => {
+      const lit = (i + step) % 4 < 2;
+      ctx.fillStyle = lit ? AMBER : '#3a2f0a';
+      ctx.shadowColor = lit ? AMBER : 'transparent';
+      ctx.shadowBlur = lit ? 12 : 0;
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+  },
+  headerTitle: 'LIGHTS VS DARKS',
+  headerDate: 'FACE-OFF TONIGHT',
+  headerFont: px => `800 ${Math.round(px * 1.05)}px ${DISPLAY}`,
+  headerText: AMBER,
+  headerSub: '#ff8a2a',
+  rule: [AMBER, '#ff3b30'],
+  lights: { title: '#ffffff', sub: AMBER, pill: 'rgba(255, 255, 255, 0.05)', pillText: '#ffffff' },
+  darks: { title: '#3dff6e', sub: AMBER, pill: 'rgba(61, 255, 110, 0.05)', pillText: '#3dff6e' },
+  slash: { kind: 'line', color: AMBER, width: 14 },
+  vs: { fill: '#ff3b30', ring: AMBER, text: '#ffffff' },
+  goalie: { fill: AMBER, text: '#000000' },
+  titleFont: px => `800 ${px}px ${DISPLAY}`,
+  subFont: px => `700 ${Math.round(px * 1.2)}px ${DISPLAY}`,
+  nameFont: px => `700 ${Math.round(px * 1.25)}px ${DISPLAY}`,
+  pillRadius: 0
+};
+
+export type GraphicDesign =
+  | 'rink'
+  | 'matchday'
+  | 'dossier'
+  | 'nightvision'
+  | 'chalkboard'
+  | 'backpage'
+  | 'frozen'
+  | 'jumbotron';
 
 export const THEMES: Record<GraphicDesign, Theme> = {
   rink,
   matchday,
   dossier,
-  nightvision: nightVision
+  nightvision: nightVision,
+  chalkboard,
+  backpage: backPage,
+  frozen,
+  jumbotron
 };
 
 export const GRAPHIC_DESIGNS = (Object.keys(THEMES) as GraphicDesign[]).map(value => ({
   value,
-  label: THEMES[value].label
+  label: THEMES[value].label,
+  animated: !!THEMES[value].animated
 }));
