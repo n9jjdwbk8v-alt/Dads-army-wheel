@@ -12,8 +12,7 @@ export type Player = {
 
 export type Team = 'light' | 'dark';
 
-/** The two sides; `danSmith` marks teams stacked by Dan Smith mode, so the picture can say so. */
-export type Teams = { light: Player[]; dark: Player[]; danSmith?: true };
+export type Teams = { light: Player[]; dark: Player[] };
 
 export const TEAM_LABEL: Record<Team, string> = { light: 'Lights', dark: 'Darks' };
 
@@ -177,24 +176,6 @@ export const splitTeams = (players: Player[], recent: GameRecord[] = []): Teams 
     }
   }
   return best;
-};
-
-/** How far Dan Smith mode goes from the most even split towards all the best players on one side (0 to 1). */
-const STACKING = 0.4;
-
-/**
- * Dan Smith mode: one team clearly stronger, but not so much it isn't a game. The gap between the teams' totals
- * is the achievable one nearest STACKING of the way from the most even split to the fully stacked one. Goalies
- * are still shared out one per team, and which side is stronger is a coin flip.
- */
-export const stackTeams = (players: Player[]): Teams => {
-  const skaters = players.filter(p => !isGoalie(p));
-  const sample = splitSampler(skaters, (gap, gaps) => {
-    const target = gaps[0] + (gaps[gaps.length - 1] - gaps[0]) * STACKING;
-    const nearest = gaps.reduce((best, g) => (Math.abs(g - target) < Math.abs(best - target) ? g : best));
-    return gap === nearest;
-  });
-  return { ...withGoalies(sample(), players.filter(isGoalie)), danSmith: true };
 };
 
 const withGoalies = ([skatersA, skatersB]: [Player[], Player[]], goalies: Player[]): Teams => {

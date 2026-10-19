@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { BombIcon } from '@hugeicons/core-free-icons';
-import SlideCommit from './reactbits/SlideCommit';
 import { useRendered } from './useRendered';
 import { copyText, download as downloadFile, shareOrDownload } from '../lib/share';
-import { isGoalie, splitTeams, stackTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
+import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import {
   drawTeamsGraphic,
   drawTeamsThumbnail,
@@ -32,7 +29,7 @@ const shareText = (t: Teams) => {
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const line = (team: Team, players: Player[]) =>
     `${team === 'light' ? '⚪' : '🟢'} ${TEAM_LABEL[team].toUpperCase()} (${players.length}): ${players.map(p => (isGoalie(p) ? `${p.name} (G)` : p.name)).join(', ')}`;
-  return `🏒 Dads Army — ${date}${t.danSmith ? '\nDAN SMITH MODE' : ''}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
+  return `🏒 Dads Army — ${date}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
 };
 
 const idsKey = (players: Player[]) =>
@@ -50,11 +47,9 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
   // Teams go stale if someone was ticked in or out after the split.
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
   const ready = hasTeams && !stale;
-  const teamsKey = `${teams.danSmith ? 'dan-smith|' : ''}${idsKey(teams.light)}|${idsKey(teams.dark)}`;
-  // Dan Smith mode has one picture of its own, so the style doesn't matter and there's nothing to animate.
-  const danSmith = !!teams.danSmith;
-  const key = danSmith ? teamsKey : `${teamsKey}|${design}`;
-  const animated = !danSmith && GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
+  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}`;
+  const key = `${teamsKey}|${design}`;
+  const animated = GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
 
   // Mini previews of every style with tonight's teams, filled in one at a time.
   const [thumbs, setThumbs] = useState<{ key: string; urls: Partial<Record<GraphicDesign, string>> }>({
@@ -62,7 +57,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
     urls: {}
   });
   useEffect(() => {
-    if (!ready || danSmith) return;
+    if (!ready) return;
     let cancelled = false;
     (async () => {
       const urls: Partial<Record<GraphicDesign, string>> = {};
@@ -75,7 +70,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
     return () => {
       cancelled = true;
     };
-  }, [teams, teamsKey, ready, danSmith]);
+  }, [teams, teamsKey, ready]);
   const thumbUrls = thumbs.key === teamsKey ? thumbs.urls : {};
   // The preview is always the finished still; an animated style also builds its GIF for sending.
   const picture = useRendered(key, ready, () => drawTeamsGraphic(teams, design));
@@ -135,24 +130,6 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
         {enough && recent.length > 0 && (
           <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
         )}
-        {enough && (
-          // A faint classified badge: slide inside it, left to right, to fill it with Dan Smith mode.
-          <div className="classified">
-            <SlideCommit
-              label="Classified"
-              doneLabel="Dan Smith mode"
-              width={220}
-              height={38}
-              radius={3}
-              trackColor="#151d10"
-              handleColor="#c4321f"
-              successColor="#c4321f"
-              holdMs={1800}
-              icon={<HugeiconsIcon icon={BombIcon} size={16} strokeWidth={2} />}
-              onConfirm={() => onSplit(stackTeams(present))}
-            />
-          </div>
-        )}
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
       </div>
 
@@ -175,28 +152,24 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
             )}
             {animated && <span className="graphic__badge">GIF</span>}
           </div>
-          {!danSmith && (
-            <>
-              <p className="graphic__label">Choose a style</p>
-              <div className="thumbs" role="radiogroup" aria-label="Picture style">
-                {GRAPHIC_DESIGNS.map(d => (
-                  <button
-                    key={d.value}
-                    role="radio"
-                    aria-checked={d.value === design}
-                    className={d.value === design ? 'thumb thumb--on' : 'thumb'}
-                    onClick={() => setDesign(d.value)}
-                  >
-                    <span className="thumb__img">
-                      {thumbUrls[d.value] && <img src={thumbUrls[d.value]} alt="" />}
-                      {d.animated && <span className="thumb__gif">GIF</span>}
-                    </span>
-                    <span className="thumb__label">{d.label}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          <p className="graphic__label">Choose a style</p>
+          <div className="thumbs" role="radiogroup" aria-label="Picture style">
+            {GRAPHIC_DESIGNS.map(d => (
+              <button
+                key={d.value}
+                role="radio"
+                aria-checked={d.value === design}
+                className={d.value === design ? 'thumb thumb--on' : 'thumb'}
+                onClick={() => setDesign(d.value)}
+              >
+                <span className="thumb__img">
+                  {thumbUrls[d.value] && <img src={thumbUrls[d.value]} alt="" />}
+                  {d.animated && <span className="thumb__gif">GIF</span>}
+                </span>
+                <span className="thumb__label">{d.label}</span>
+              </button>
+            ))}
+          </div>
           <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!shareable}>
             {shareable || !animated ? 'Send to WhatsApp' : 'Making GIF…'}
           </button>

@@ -1,7 +1,6 @@
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { isGoalie, type Teams } from './teams';
 import { fit, loadFonts, loadLogo, newCanvas } from './canvasKit';
-import { drawDanSmithPicture } from './danSmithGraphic';
 import {
   H,
   HEADER,
@@ -153,9 +152,6 @@ const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: numbe
  * 'neon', or sliding in for 'slide'); 1 is the finished picture.
  */
 const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, date: Date, t: number) => {
-  const dateText = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
-  // Dan Smith mode has its own picture, whatever style is picked.
-  if (teams.danSmith) return drawDanSmithPicture(ctx, teams, dateText);
   const { theme } = a;
   const lit = (start: number, seed: number) => theme.animated !== 'neon' || neonLit(t, start, seed);
   const slide = (start: number, length: number) => (theme.animated === 'slide' ? easeOut(phase(t, start, length)) : 1);
@@ -176,6 +172,7 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     ctx.drawImage(a.logo, PAD - 16, 20, h * a.logoAspect, h);
     ctx.globalAlpha = 1;
   }
+  const dateText = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
   // Header text sits right of the logo, shrunk if a long title or wide font would reach it.
   const headerRoom = W - PAD - (PAD - 16 + (HEADER - 52) * a.logoAspect + 30);
   ctx.textAlign = 'right';

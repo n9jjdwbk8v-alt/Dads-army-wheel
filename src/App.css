@@ -604,53 +604,6 @@
   font-size: 0.9rem;
 }
 
-/* ---------- Dan Smith mode ---------- */
-
-/* The badge stays put; the slider sits inside its dashed border (220px inside, matching its width). */
-.classified {
-  width: 230px;
-  margin-top: 0.25rem;
-  padding: 3px;
-  border: 2px dashed rgba(230, 240, 214, 0.14);
-  border-radius: 4px;
-  transform: rotate(-2deg);
-}
-
-.classified .slide-commit {
-  display: block;
-}
-
-/* CLASSIFIED stays where it is while the red fills over it. */
-.classified .slide-commit__label {
-  opacity: 1 !important;
-}
-
-.classified .slide-commit__text {
-  color: rgba(230, 240, 214, 0.14);
-  font-family: var(--font-stencil);
-  font-size: 1rem;
-  font-weight: 400;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-}
-
-/* The bomb handle is faint until it's touched, so the badge still looks like nothing. */
-.classified .slide-commit:not([data-held]):not([data-phase='done']) .slide-commit__capsule {
-  opacity: 0.3;
-}
-
-.classified .slide-commit__done {
-  font-family: var(--font-stencil);
-  font-size: 0.9rem;
-  font-weight: 400;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.classified .slide-commit__done svg {
-  display: none;
-}
-
 .graphic {
   display: flex;
   flex-direction: column;
