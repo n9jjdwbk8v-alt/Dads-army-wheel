@@ -675,6 +675,7 @@
 }
 
 .gameday__details {
+  container-type: inline-size;
   display: grid;
   gap: 0.85rem;
   justify-items: stretch;
@@ -686,21 +687,25 @@
   justify-self: center;
   display: flex;
   justify-content: center;
-  gap: clamp(0.6rem, 3vw, 1rem);
+  gap: clamp(0.4rem, 4cqi, 1rem);
+  max-width: 100%;
   padding: 0.35rem 0;
 }
 
+/* Sized from the panel's width (cqi) so both stamps always fit on one line, even zoomed in on a small phone. */
 .stamp {
-  padding: 0.55rem clamp(0.65rem, 3vw, 1rem);
+  flex: 0 1 auto;
+  min-width: 0;
+  padding: 0.5em clamp(0.45rem, 3.5cqi, 1rem);
   border: 3px solid currentColor;
   border-radius: 6px;
   background: none;
   color: #c7cbc2;
   font-family: var(--font-stencil);
-  font-size: clamp(0.95rem, 4.6vw, 1.3rem);
+  font-size: clamp(0.75rem, 6.2cqi, 1.3rem);
   letter-spacing: 0.06em;
-  white-space: nowrap;
   text-transform: uppercase;
+  white-space: nowrap;
   transform: rotate(-3deg);
   cursor: pointer;
   transition: color 0.2s;
