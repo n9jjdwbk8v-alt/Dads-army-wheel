@@ -92,7 +92,14 @@ export default function App() {
 
       <InstallTip />
 
-      <footer className="foot">Saved on this device · Lights vs Darks</footer>
+      {/* Phones turned sideways get this instead of the app, which is laid out for upright use. */}
+      <div className="upright" aria-hidden="true">
+        <svg className="upright__phone" viewBox="0 0 24 24" width="64" height="64">
+          <rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+          <path d="M10.5 18.5h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+        <p className="upright__text">Turn your phone upright</p>
+      </div>
     </ClickSpark>
   );
 }

@@ -227,11 +227,55 @@
   color: var(--muted);
 }
 
-.foot {
-  text-align: center;
-  font-size: 0.8rem;
-  color: #b8c9a0;
-  padding: 0 1rem 1.5rem;
+.upright {
+  display: none;
+}
+
+/* A phone on its side (short and touch-driven): cover the app and ask for it to be turned back. */
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
+  .upright {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #0c120a;
+    color: #c8e66b;
+  }
+
+  .upright__phone {
+    animation: upright-turn 1.6s ease-in-out infinite;
+  }
+
+  .upright__text {
+    margin: 0;
+    font-family: var(--font-stencil);
+    font-size: 1.2rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #d9e8c4;
+  }
+}
+
+@keyframes upright-turn {
+  0%,
+  20% {
+    transform: rotate(-90deg);
+  }
+
+  60%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upright__phone {
+    animation: none;
+  }
 }
 
 /* ---------- Controls ---------- */

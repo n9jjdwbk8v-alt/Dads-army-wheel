@@ -17,6 +17,11 @@ for (const gesture of ['gesturestart', 'gesturechange', 'gestureend']) {
   document.addEventListener(gesture, e => e.preventDefault(), { passive: false });
 }
 
+// Keep the installed app upright where the phone allows it (Android); elsewhere a sideways phone gets a
+// "turn your phone upright" screen.
+const orientation = screen.orientation as (ScreenOrientation & { lock?: (o: string) => Promise<void> }) | undefined;
+orientation?.lock?.('portrait').catch(() => {});
+
 // Ask the browser to keep this site's saved roster, history and fees rather than clearing them when the phone
 // runs low on space. Installed (Home Screen) apps usually get this automatically.
 navigator.storage?.persist?.().catch(() => {});
