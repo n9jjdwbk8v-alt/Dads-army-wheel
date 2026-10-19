@@ -3,7 +3,7 @@ import StarBorder from './reactbits/StarBorder';
 import SpotlightCard from './reactbits/SpotlightCard';
 import { isGoalie, splitTeams, TEAM_LABEL, type Player, type Team, type Teams } from '../lib/teams';
 import RubberSegment from './reactbits/RubberSegment';
-import { drawTeamsGraphic, GRAPHIC_BACKGROUNDS, type GraphicBackground } from '../lib/teamGraphic';
+import { drawTeamsGraphic, makeTeamsGif, GRAPHIC_DESIGNS, type GraphicDesign } from '../lib/teamGraphic';
 import { usePersistentState } from '../lib/storage';
 
 type TeamsViewProps = {
@@ -25,47 +25,66 @@ const idsKey = (players: Player[]) =>
     .sort()
     .join();
 
+type Rendered = { key: string; blob: Blob; url: string };
+
+/** Renders a blob whenever `key` changes (while enabled), keeping an object URL for it alive until replaced. */
+const useRendered = (key: string, enabled: boolean, render: () => Promise<Blob>) => {
+  const [out, setOut] = useState<Rendered | null>(null);
+  const renderRef = useRef(render);
+  const urlRef = useRef('');
+  useEffect(() => {
+    renderRef.current = render;
+  });
+  useEffect(() => () => URL.revokeObjectURL(urlRef.current), []);
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    renderRef.current().then(blob => {
+      if (cancelled) return;
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = URL.createObjectURL(blob);
+      setOut({ key, blob, url: urlRef.current });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [key, enabled]);
+  return out;
+};
+
+type Format = 'gif' | 'png';
+
 export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
-  const [drawn, setDrawn] = useState<{ key: string; blob: Blob; url: string } | null>(null);
-  const [background, setBackground] = usePersistentState<GraphicBackground>('dads-army:graphic-bg', 'woodland');
+  const [savedDesign, setDesign] = usePersistentState<GraphicDesign>('dads-army:graphic-design', 'rink');
+  const [format, setFormat] = usePersistentState<Format>('dads-army:graphic-format', 'gif');
+  const design = GRAPHIC_DESIGNS.some(d => d.value === savedDesign) ? savedDesign : 'rink';
   const hasTeams = teams.light.length + teams.dark.length > 0;
   const enough = present.length >= 2;
   // Teams go stale if someone was ticked in or out after the split.
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
   const ready = hasTeams && !stale;
-  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}|${background}`;
-  // Only share a graphic drawn for the teams and background currently chosen; an older one is just a placeholder.
-  const graphic = ready && drawn?.key === teamsKey ? drawn : null;
+  const key = `${idsKey(teams.light)}|${idsKey(teams.dark)}|${design}`;
 
-  const urlRef = useRef('');
-  useEffect(() => () => URL.revokeObjectURL(urlRef.current), []);
-
-  useEffect(() => {
-    if (!ready) return;
-    let cancelled = false;
-    drawTeamsGraphic(teams, background).then(blob => {
-      if (cancelled) return;
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = URL.createObjectURL(blob);
-      setDrawn({ key: teamsKey, blob, url: urlRef.current });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [teams, background, teamsKey, ready]);
+  const still = useRendered(key, ready, () => drawTeamsGraphic(teams, design));
+  const anim = useRendered(key, ready && format === 'gif', () => makeTeamsGif(teams, design));
+  const chosen = format === 'gif' ? anim : still;
+  // Only share a picture made for the teams and style currently chosen; anything older is just a placeholder.
+  const shareable = ready && chosen?.key === key ? chosen : null;
+  const preview = shareable ?? (still?.key === key ? still : chosen ?? still);
+  const fileName = `dads-army-teams.${format}`;
 
   const download = () => {
-    if (!graphic) return;
+    if (!shareable) return;
     const a = document.createElement('a');
-    a.href = graphic.url;
-    a.download = 'dads-army-teams.png';
+    a.href = shareable.url;
+    a.download = fileName;
     a.click();
   };
 
   const shareImage = async () => {
-    if (!graphic) return;
-    const file = new File([graphic.blob], 'dads-army-teams.png', { type: 'image/png' });
+    if (!shareable) return;
+    const file = new File([shareable.blob], fileName, { type: shareable.blob.type });
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file] });
@@ -120,32 +139,47 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
         </div>
       )}
 
-      {ready && drawn && (
+      {ready && preview && (
         <div className="panel graphic">
-          <p className="graphic__label">Picture background</p>
+          <p className="graphic__label">Picture style</p>
+          <div className="chips" role="group" aria-label="Picture style">
+            {GRAPHIC_DESIGNS.map(d => (
+              <button
+                key={d.value}
+                className={d.value === design ? 'chip chip--on' : 'chip'}
+                aria-pressed={d.value === design}
+                onClick={() => setDesign(d.value)}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
           <RubberSegment
-            items={GRAPHIC_BACKGROUNDS}
-            value={background}
-            onChange={v => setBackground(v as GraphicBackground)}
+            items={[
+              { value: 'gif', label: 'Animated GIF' },
+              { value: 'png', label: 'Still picture' }
+            ]}
+            value={format}
+            onChange={v => setFormat(v as Format)}
             size="sm"
             trackColor="#e3f3e9"
             thumbColor="#0f5132"
             textColor="#0f5132"
             activeTextColor="#ffffff"
-            aria-label="Picture background"
+            aria-label="Picture format"
           />
           <img
-            src={drawn.url}
-            alt="Lights vs Darks team graphic"
-            className={graphic ? 'graphic__img' : 'graphic__img graphic__img--updating'}
+            src={preview.url}
+            alt="Lights vs Darks team picture"
+            className={shareable ? 'graphic__img' : 'graphic__img graphic__img--updating'}
           />
-          <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!graphic}>
-            Send to WhatsApp
+          <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!shareable}>
+            {shareable ? 'Send to WhatsApp' : format === 'gif' ? 'Making GIF…' : 'Drawing…'}
           </button>
           <p className="muted small">Tip: on a phone you can also press and hold the picture to save or share it.</p>
           <div className="split__actions">
-            <button className="btn btn--ghost" onClick={download} disabled={!graphic}>
-              Download image
+            <button className="btn btn--ghost" onClick={download} disabled={!shareable}>
+              Download {format === 'gif' ? 'GIF' : 'image'}
             </button>
             <button className="btn btn--ghost" onClick={copyText}>
               {copied ? 'Copied!' : 'Copy as text'}
