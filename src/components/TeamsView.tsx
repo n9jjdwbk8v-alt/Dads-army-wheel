@@ -32,7 +32,7 @@ const shareText = (t: Teams) => {
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const line = (team: Team, players: Player[]) =>
     `${team === 'light' ? '⚪' : '🟢'} ${TEAM_LABEL[team].toUpperCase()} (${players.length}): ${players.map(p => (isGoalie(p) ? `${p.name} (G)` : p.name)).join(', ')}`;
-  return `🏒 Dads Army — ${date}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
+  return `🏒 Dads Army — ${date}${t.danSmith ? '\n💣 DAN SMITH MODE' : ''}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
 };
 
 const idsKey = (players: Player[]) =>
@@ -52,7 +52,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
   // Teams go stale if someone was ticked in or out after the split.
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
   const ready = hasTeams && !stale;
-  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}`;
+  const teamsKey = `${teams.danSmith ? 'dan-smith|' : ''}${idsKey(teams.light)}|${idsKey(teams.dark)}`;
   const key = `${teamsKey}|${design}`;
   const animated = GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
 
@@ -136,11 +136,12 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
           <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
         )}
         {enough && (
-          // A faint classified badge: swipe inside it to slide the word away and uncover Dan Smith mode, then tap.
+          // A faint classified badge: swipe left to right inside it to fill it with Dan Smith mode, then tap.
           <div className="classified">
             <SwipeRow
               key={classified}
               label="Classified"
+              direction="right"
               height={38}
               radius={2}
               actionWidth={220}

@@ -177,15 +177,18 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
   const headerRoom = W - PAD - (PAD - 16 + (HEADER - 52) * a.logoAspect + 30);
   ctx.textAlign = 'right';
   ctx.letterSpacing = '3px';
+  // Dan Smith mode takes over the title, with the usual Lights vs Darks moved under it.
+  const headerTitle = teams.danSmith ? 'DAN SMITH MODE' : theme.headerTitle;
+  const headerLine = teams.danSmith ? ['LIGHTS VS DARKS', dateText] : [theme.headerDate, dateText];
   ctx.font = theme.headerFont(62);
-  const titleWidth = ctx.measureText(theme.headerTitle).width;
+  const titleWidth = ctx.measureText(headerTitle).width;
   if (titleWidth > headerRoom) ctx.font = theme.headerFont(Math.floor((62 * headerRoom) / titleWidth));
   ctx.fillStyle = lightUp(ctx, theme, theme.headerText ?? '#ffffff', headerOn);
-  ctx.fillText(theme.headerTitle, W - PAD, 92);
+  ctx.fillText(headerTitle, W - PAD, 92);
   ctx.letterSpacing = '4px';
   ctx.font = theme.subFont(34);
   ctx.fillStyle = lightUp(ctx, theme, theme.headerSub ?? 'rgba(255, 255, 255, 0.7)', headerOn);
-  ctx.fillText([theme.headerDate, dateText].filter(Boolean).join(' · '), W - PAD, 160);
+  ctx.fillText(headerLine.filter(Boolean).join(' · '), W - PAD, 160);
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
 

@@ -12,7 +12,8 @@ export type Player = {
 
 export type Team = 'light' | 'dark';
 
-export type Teams = { light: Player[]; dark: Player[] };
+/** The two sides; `danSmith` marks teams stacked by Dan Smith mode, so the picture can say so. */
+export type Teams = { light: Player[]; dark: Player[]; danSmith?: true };
 
 export const TEAM_LABEL: Record<Team, string> = { light: 'Lights', dark: 'Darks' };
 
@@ -185,7 +186,7 @@ export const stackTeams = (players: Player[]): Teams => {
     .sort((a, b) => b.p.skill - a.p.skill || a.r - b.r)
     .map(x => x.p);
   const half = Math.floor(skaters.length / 2);
-  return withGoalies([skaters.slice(0, half), skaters.slice(half)], players.filter(isGoalie));
+  return { ...withGoalies([skaters.slice(0, half), skaters.slice(half)], players.filter(isGoalie)), danSmith: true };
 };
 
 const withGoalies = ([skatersA, skatersB]: [Player[], Player[]], goalies: Player[]): Teams => {
