@@ -209,10 +209,12 @@ const drawEntry = (ctx: CanvasRenderingContext2D, entry: ListEntry, x: number, y
   ctx.letterSpacing = '1px';
   // Long names shrink to fit (down to 60%) before being cut short.
   const room = entry.tag ? max - 70 : max;
-  ctx.font = `${size}px ${BLOCK}`;
-  const natural = ctx.measureText(entry.name.toUpperCase()).width;
-  if (natural > room) ctx.font = `${Math.max(Math.round(size * 0.6), Math.floor((size * room) / natural))}px ${BLOCK}`;
-  const name = fit(ctx, entry.name.toUpperCase(), room);
+  const upper = entry.name.toUpperCase();
+  for (let px = size; px >= Math.round(size * 0.6); px--) {
+    ctx.font = `${px}px ${BLOCK}`;
+    if (ctx.measureText(upper).width <= room) break;
+  }
+  const name = fit(ctx, upper, room);
   if (!entry.tag) {
     ctx.fillStyle = '#f4f4f0';
     ctx.fillText(name, x, y);
