@@ -29,10 +29,10 @@ const random = () => {
 
 /**
  * Prepares to split players into two groups — the first of floor(n/2), the second the rest — whose skill totals
- * are as close as possible. Each call of the returned function picks one of the equally balanced splits
- * uniformly at random.
+ * are as close as possible, or within `slack` points of that. Each call of the returned function picks one of
+ * those splits uniformly at random.
  */
-const balancedSampler = (players: Player[]): (() => [Player[], Player[]]) => {
+const balancedSampler = (players: Player[], slack = 0): (() => [Player[], Player[]]) => {
   const n = players.length;
   if (!n) return () => [[], []];
   const k = Math.floor(n / 2);
@@ -54,14 +54,14 @@ const balancedSampler = (players: Player[]): (() => [Player[], Player[]]) => {
     }
   }
 
-  // Find the smallest achievable gap and the skill sums that achieve it.
+  // Find the smallest achievable gap and the skill sums that come within `slack` of it.
   let bestGap = Infinity;
   for (let s = 0; s <= total; s++) {
     if (ways[n][k][s] > 0) bestGap = Math.min(bestGap, Math.abs(total - 2 * s));
   }
   const targets: number[] = [];
   for (let s = 0; s <= total; s++) {
-    if (ways[n][k][s] > 0 && Math.abs(total - 2 * s) === bestGap) targets.push(s);
+    if (ways[n][k][s] > 0 && Math.abs(total - 2 * s) <= bestGap + slack) targets.push(s);
   }
   const weight = targets.reduce((sum, s) => sum + ways[n][k][s], 0);
 
@@ -134,28 +134,58 @@ export const repeatScore = (teams: Teams, games: GameRecord[]) => {
 /** Balanced splits to compare when trying to avoid repeating recent games. */
 const CANDIDATES = 300;
 
+/** How many skill points further apart than the most even split the teams may be, to avoid repeating games. */
+const SLACK = 2;
+
+/** What each point of imbalance beyond the most even split costs, in teammate pairs repeated from last week. */
+const IMBALANCE_COST = 0.25;
+
+const skillOf = (team: Player[]) => team.reduce((sum, p) => sum + p.skill, 0);
+
+/** How far apart the two teams' skill totals are. */
+const gapOf = (teams: Teams) => Math.abs(skillOf(teams.light) - skillOf(teams.dark));
+
 /**
  * Splits players into two teams of equal size (or one apart). Goalies are shared out first, one per team where
- * possible, and skaters are then balanced on skill. Among equally fair line-ups it prefers the one that keeps
- * the fewest teammates together from `recent` games (newest first); splitting again reshuffles.
+ * possible, and skaters are then balanced on skill. With `recent` games (newest first), it keeps as few
+ * teammates together from them as it can, letting the teams be up to SLACK points less even to do so but
+ * preferring the most even split when it's as fresh; splitting again reshuffles.
  */
 export const splitTeams = (players: Player[], recent: GameRecord[] = []): Teams => {
   const goalies = players.filter(isGoalie);
-  const sample = balancedSampler(players.filter(p => !isGoalie(p)));
-  const draw = () => withGoalies(sample(), goalies);
-  if (!recent.length) return draw();
+  const skaters = players.filter(p => !isGoalie(p));
+  const even = balancedSampler(skaters);
+  if (!recent.length) return withGoalies(even(), goalies);
 
-  let best = draw();
-  let bestScore = repeatScore(best, recent);
-  for (let i = 1; i < CANDIDATES && bestScore > 0; i++) {
-    const candidate = draw();
-    const score = repeatScore(candidate, recent);
-    if (score < bestScore) {
+  const loose = balancedSampler(skaters, SLACK);
+  let best = withGoalies(even(), goalies);
+  const evenest = gapOf(best);
+  const cost = (teams: Teams) => repeatScore(teams, recent) + IMBALANCE_COST * (gapOf(teams) - evenest);
+  let bestCost = cost(best);
+  for (let i = 1; i < CANDIDATES && bestCost > 0; i++) {
+    // Half the tries come from the most even splits, so a fresh one of those is found when it exists.
+    const candidate = withGoalies((i % 2 ? loose : even)(), goalies);
+    const score = cost(candidate);
+    if (score < bestCost) {
       best = candidate;
-      bestScore = score;
+      bestCost = score;
     }
   }
   return best;
+};
+
+/**
+ * Dan Smith mode: the highest-rated skaters on one team and the rest on the other, as unfair as it gets.
+ * Goalies are still shared out one per team, and which side gets the stars is a coin flip.
+ */
+export const stackTeams = (players: Player[]): Teams => {
+  const skaters = players
+    .filter(p => !isGoalie(p))
+    .map(p => ({ p, r: random() }))
+    .sort((a, b) => b.p.skill - a.p.skill || a.r - b.r)
+    .map(x => x.p);
+  const half = Math.floor(skaters.length / 2);
+  return withGoalies([skaters.slice(0, half), skaters.slice(half)], players.filter(isGoalie));
 };
 
 const withGoalies = ([skatersA, skatersB]: [Player[], Player[]], goalies: Player[]): Teams => {

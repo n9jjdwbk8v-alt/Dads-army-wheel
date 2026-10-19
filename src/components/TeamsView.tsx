@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import PixelTransition from './reactbits/PixelTransition';
 import { useRendered } from './useRendered';
 import { copyText, download as downloadFile, shareOrDownload } from '../lib/share';
-import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
+import { isGoalie, splitTeams, stackTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import {
   drawTeamsGraphic,
   drawTeamsThumbnail,
@@ -40,6 +41,8 @@ const idsKey = (players: Player[]) =>
 
 export default function TeamsView({ present, teams, recent, onSplit }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
+  // The teams Dan Smith mode last made, to say so while they're showing.
+  const [stacked, setStacked] = useState('');
   const [savedDesign, setDesign] = usePersistentState<GraphicDesign>('dads-army:graphic-design', 'rink');
   const design = GRAPHIC_DESIGNS.some(d => d.value === savedDesign) ? savedDesign : 'rink';
   const hasTeams = teams.light.length + teams.dark.length > 0;
@@ -129,6 +132,34 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
         </div>
         {enough && recent.length > 0 && (
           <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
+        )}
+        {stacked === teamsKey && ready && (
+          <p className="notice notice--dan">Dan Smith mode: the best players v the rest. Reshuffle to make it fair again.</p>
+        )}
+        {enough && (
+          // A faint stamp that pixel-dissolves, when tapped, into the button for Dan Smith mode.
+          <PixelTransition
+            className="classified"
+            trigger="click"
+            aspectRatio="230 / 50"
+            gridSize={16}
+            pixelColor="#c8e66b"
+            animationStepDuration={0.3}
+            firstContent={<span className="classified__stamp">Classified</span>}
+            secondContent={
+              <button
+                className="classified__btn"
+                onClick={e => {
+                  e.stopPropagation();
+                  const next = stackTeams(present);
+                  onSplit(next);
+                  setStacked(`${idsKey(next.light)}|${idsKey(next.dark)}`);
+                }}
+              >
+                Dan Smith mode
+              </button>
+            }
+          />
         )}
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
       </div>
