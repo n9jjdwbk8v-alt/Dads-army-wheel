@@ -70,41 +70,17 @@ const prepare = async (design: GraphicDesign): Promise<Assets> => {
 const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme) => {
   const { kind, color, width } = theme.slash;
   ctx.save();
-  if (kind === 'hazard') {
-    // A band of yellow and black tape.
-    const half = width / 2;
-    ctx.beginPath();
-    ctx.moveTo(SLASH_TOP - half, HEADER);
-    ctx.lineTo(SLASH_TOP + half, HEADER);
-    ctx.lineTo(SLASH_BOTTOM + half, H);
-    ctx.lineTo(SLASH_BOTTOM - half, H);
-    ctx.closePath();
-    ctx.clip();
-    ctx.fillStyle = color;
-    ctx.fillRect(SLASH_BOTTOM - width, HEADER, SLASH_TOP - SLASH_BOTTOM + width * 2, H - HEADER);
-    ctx.fillStyle = '#0e120a';
-    for (let y = HEADER - 400; y < H; y += 56) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y + 300);
-      ctx.lineTo(W, y + 328);
-      ctx.lineTo(0, y + 28);
-      ctx.closePath();
-      ctx.fill();
-    }
-  } else {
-    if (kind === 'glow') {
-      ctx.shadowColor = color;
-      ctx.shadowBlur = 28;
-    }
-    ctx.strokeStyle = color;
-    ctx.lineWidth = width;
-    ctx.lineCap = 'butt';
-    ctx.beginPath();
-    ctx.moveTo(SLASH_TOP, HEADER);
-    ctx.lineTo(SLASH_BOTTOM, H);
-    ctx.stroke();
+  if (kind === 'glow') {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 28;
   }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.moveTo(SLASH_TOP, HEADER);
+  ctx.lineTo(SLASH_BOTTOM, H);
+  ctx.stroke();
   ctx.restore();
 };
 

@@ -62,7 +62,7 @@ export type Theme = {
   rule: [string, string];
   lights: Side;
   darks: Side;
-  slash: { kind: 'line' | 'hazard' | 'glow'; color: string; width: number };
+  slash: { kind: 'line' | 'glow'; color: string; width: number };
   vs: { fill: string; ring: string; text: string };
   goalie: { fill: string; text: string };
   titleFont: (px: number) => string;
@@ -303,55 +303,6 @@ const dossier: Theme = {
   pillRadius: 3
 };
 
-// ---------- Chevrons: rank stripes and a hazard-tape slash ----------
-
-const chevronTile = (stroke: string) => {
-  const c = document.createElement('canvas');
-  c.width = 120;
-  c.height = 100;
-  const g = c.getContext('2d')!;
-  g.strokeStyle = stroke;
-  g.lineWidth = 16;
-  g.lineJoin = 'miter';
-  for (const y of [10, 60]) {
-    g.beginPath();
-    g.moveTo(-10, y);
-    g.lineTo(60, y + 34);
-    g.lineTo(130, y);
-    g.stroke();
-  }
-  return c;
-};
-
-const chevrons: Theme = {
-  label: 'Chevrons',
-  background: ctx => {
-    ctx.fillStyle = '#e4ddc0';
-    ctx.fillRect(0, 0, W, H);
-    fillPattern(ctx, chevronTile('rgba(110, 96, 50, 0.1)'));
-    clipped(ctx, darksShape, () => {
-      ctx.fillStyle = '#1b2213';
-      ctx.fillRect(0, 0, W, H);
-      fillPattern(ctx, chevronTile('rgba(242, 194, 48, 0.06)'));
-    });
-    fillPattern(ctx, grain(18, 5));
-    headerBand(ctx, '#0e120a');
-  },
-  headerTitle: 'LIGHTS VS DARKS',
-  headerDate: '',
-  headerFont: px => `${px}px ${STENCIL}`,
-  rule: ['#f2c230', '#0e120a'],
-  lights: { title: '#1b2213', sub: '#6b5f2a', pill: 'rgba(27, 34, 19, 0.09)', pillText: '#1b2213' },
-  darks: { title: '#f2c230', sub: '#c9bd84', pill: 'rgba(255, 255, 255, 0.07)', pillText: '#f0ead2' },
-  slash: { kind: 'hazard', color: '#f2c230', width: 44 },
-  vs: { fill: '#0e120a', ring: '#f2c230', text: '#f2c230' },
-  goalie: { fill: '#f2c230', text: '#0e120a' },
-  titleFont: px => `${Math.round(px * 0.92)}px ${STENCIL}`,
-  subFont: px => `600 ${px}px ${DISPLAY}`,
-  nameFont: px => `600 ${Math.round(px * 1.05)}px ${DISPLAY}`,
-  pillRadius: 4
-};
-
 // ---------- Night vision: green phosphor with a HUD ----------
 
 const NV = '#7dff7d';
@@ -448,13 +399,12 @@ const nightVision: Theme = {
   tintLogo: NV
 };
 
-export type GraphicDesign = 'rink' | 'matchday' | 'dossier' | 'chevrons' | 'nightvision';
+export type GraphicDesign = 'rink' | 'matchday' | 'dossier' | 'nightvision';
 
 export const THEMES: Record<GraphicDesign, Theme> = {
   rink,
   matchday,
   dossier,
-  chevrons,
   nightvision: nightVision
 };
 
