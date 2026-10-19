@@ -357,40 +357,54 @@
   color: var(--muted);
 }
 
-.chips {
+.style-picker {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 420px;
 }
 
-.chip {
+.style-picker__select {
+  flex: 1;
+  min-width: 0;
+  height: 50px;
+  padding: 0 2.5rem 0 1rem;
   border: 1.5px solid var(--line);
-  border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  min-height: 38px;
-  background: #fff;
+  border-radius: 14px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%230f5132' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+      no-repeat right 1rem center,
+    #fff;
   color: var(--green-800);
+  font: inherit;
+  font-size: 16px;
   font-weight: 600;
-  font-size: 0.9rem;
+  appearance: none;
+  -webkit-appearance: none;
   cursor: pointer;
 }
 
-.chip__tag {
-  margin-left: 0.35rem;
-  padding: 0.05rem 0.35rem;
-  border-radius: 6px;
-  background: var(--accent);
-  color: var(--green-800);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+.style-picker__select:focus-visible {
+  outline: 2px solid var(--green-600);
+  outline-offset: 2px;
 }
 
-.chip--on {
-  background: var(--green-800);
-  border-color: var(--green-800);
-  color: #fff;
+.style-picker__step {
+  flex: none;
+  width: 50px;
+  height: 50px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--green-100);
+  color: var(--green-800);
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.style-picker__step:active {
+  background: #d0ebdb;
 }
 
 .graphic__img {

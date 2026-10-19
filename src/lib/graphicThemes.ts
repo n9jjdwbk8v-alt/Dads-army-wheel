@@ -34,8 +34,9 @@ const MONO = '"Share Tech Mono", "Courier New", monospace';
 const BODY = 'Inter, system-ui, sans-serif';
 const MARKER = '"Permanent Marker", "Comic Sans MS", cursive';
 const HAND = '"Gochi Hand", "Comic Sans MS", cursive';
-const MASTHEAD = '"Playfair Display", Georgia, serif';
-const SERIF = '"Libre Baskerville", Georgia, serif';
+const COMIC = 'Bangers, Impact, sans-serif';
+const ENGRAVED = 'Cinzel, Georgia, serif';
+const NEON = '"Tilt Neon", "Arial Rounded MT Bold", sans-serif';
 
 export const FONT_LOADS = [
   `800 100px ${DISPLAY}`,
@@ -48,9 +49,10 @@ export const FONT_LOADS = [
   `600 40px ${BODY}`,
   `60px ${MARKER}`,
   `40px ${HAND}`,
-  `italic 900 60px ${MASTHEAD}`,
-  `40px ${SERIF}`,
-  `700 40px ${SERIF}`
+  `60px ${COMIC}`,
+  `700 40px ${ENGRAVED}`,
+  `900 60px ${ENGRAVED}`,
+  `40px ${NEON}`
 ];
 
 type Side = {
@@ -60,6 +62,8 @@ type Side = {
   pillText: string;
   pillStroke?: string;
 };
+
+export type NeonPart = 'header' | 'slash' | 'titles' | 'vs' | 'names';
 
 export type Theme = {
   label: string;
@@ -77,16 +81,21 @@ export type Theme = {
   lights: Side;
   darks: Side;
   slash: { kind: 'line' | 'glow' | 'chalk'; color: string; width: number };
-  vs: { fill: string; ring: string; text: string };
+  vs: { fill: string; ring: string; text: string; shape?: 'circle' | 'burst' };
   goalie: { fill: string; text: string };
   titleFont: (px: number) => string;
   subFont: (px: number) => string;
   nameFont: (px: number) => string;
   pillRadius: number;
+  pillStrokeWidth?: number;
+  /** Outline drawn behind the team titles. */
+  titleStroke?: { color: string; width: number };
+  /** Text and lines glow in their own colour, like lit neon tubes. */
+  glow?: number;
+  /** Colour of an unlit neon tube while the animation flickers parts on. */
+  unlit?: string;
   tintLogo?: string;
-  /** Re-draws the picture as a dot-matrix board, one LED per `cell` pixels. */
-  led?: { cell: number };
-  /** Shared as a looping GIF rather than a still. */
+  /** Shared as a looping GIF in which each part flickers on like a neon sign. */
   animated?: boolean;
 };
 
@@ -117,8 +126,6 @@ const clipped = (ctx: CanvasRenderingContext2D, shape: (c: CanvasRenderingContex
   draw();
   ctx.restore();
 };
-
-const PAD_RULE = 50;
 
 const headerBand = (ctx: CanvasRenderingContext2D, fill: string) => {
   ctx.fillStyle = fill;
@@ -519,203 +526,188 @@ const chalkboard: Theme = {
   pillRadius: 8
 };
 
-// ---------- Back page: the newspaper sports pages ----------
+// ---------- Comic: pop-art comic book page ----------
 
-const halftone = (color: string) => {
+const halftone = (color: string, size: number, radius: number) => {
   const c = document.createElement('canvas');
-  c.width = c.height = 10;
+  c.width = c.height = size;
   const g = c.getContext('2d')!;
   g.fillStyle = color;
   g.beginPath();
-  g.arc(5, 5, 1.6, 0, Math.PI * 2);
+  g.arc(size / 2, size / 2, radius, 0, Math.PI * 2);
   g.fill();
   return c;
 };
 
-const PAPER = '#efe9da';
-const INK = '#1b2420';
-
-const backPage: Theme = {
-  label: 'Back page',
+const comic: Theme = {
+  label: 'Comic',
   background: ctx => {
-    ctx.fillStyle = PAPER;
+    ctx.fillStyle = '#ffd23f';
     ctx.fillRect(0, 0, W, H);
-    fillPattern(ctx, halftone('rgba(0, 0, 0, 0.05)'));
+    fillPattern(ctx, halftone('rgba(230, 120, 20, 0.35)', 16, 4));
     clipped(ctx, darksShape, () => {
-      ctx.fillStyle = INK;
+      ctx.fillStyle = '#1fa34a';
       ctx.fillRect(0, 0, W, H);
-      fillPattern(ctx, halftone('rgba(255, 255, 255, 0.05)'));
+      fillPattern(ctx, halftone('rgba(5, 60, 25, 0.4)', 16, 4.5));
     });
-    fillPattern(ctx, grain(26, 31));
-    // Thin rule under the masthead's top edge, like a printed page.
-    ctx.fillStyle = INK;
-    ctx.fillRect(PAD_RULE, 14, W - PAD_RULE * 2, 3);
+    // Speed lines bursting out from the VS badge.
+    const cx = slashX(HEADER + 115);
+    const cy = HEADER + 115;
+    const rand = mulberry32(77);
+    for (let i = 0; i < 70; i++) {
+      const a = (i / 70) * Math.PI * 2 + rand() * 0.05;
+      const spread = 0.012 + rand() * 0.02;
+      ctx.fillStyle = i % 2 ? 'rgba(255, 255, 255, 0.28)' : 'rgba(0, 0, 0, 0.1)';
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 140, cy + Math.sin(a) * 140);
+      ctx.lineTo(cx + Math.cos(a - spread) * 1800, cy + Math.sin(a - spread) * 1800);
+      ctx.lineTo(cx + Math.cos(a + spread) * 1800, cy + Math.sin(a + spread) * 1800);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // A white caption panel with a heavy black border.
+    headerBand(ctx, '#ffffff');
+    ctx.strokeStyle = '#111111';
+    ctx.lineWidth = 12;
+    ctx.strokeRect(6, 6, W - 12, H - 12);
+  },
+  headerTitle: 'LIGHTS VS DARKS!',
+  headerDate: 'TONIGHT',
+  headerFont: px => `${Math.round(px * 1.15)}px ${COMIC}`,
+  headerText: '#111111',
+  headerSub: '#d7263d',
+  rule: ['#111111', '#111111'],
+  lights: { title: '#ffffff', sub: '#111111', pill: '#ffffff', pillText: '#111111', pillStroke: '#111111' },
+  darks: { title: '#ffd23f', sub: '#ffffff', pill: '#111111', pillText: '#ffffff', pillStroke: '#111111' },
+  slash: { kind: 'line', color: '#111111', width: 18 },
+  vs: { fill: '#d7263d', ring: '#111111', text: '#ffffff', shape: 'burst' },
+  goalie: { fill: '#d7263d', text: '#ffffff' },
+  titleFont: px => `${Math.round(px * 1.1)}px ${COMIC}`,
+  subFont: px => `${Math.round(px * 1.05)}px ${COMIC}`,
+  nameFont: px => `${Math.round(px * 1.05)}px ${COMIC}`,
+  titleStroke: { color: '#111111', width: 12 },
+  pillRadius: 4,
+  pillStrokeWidth: 4
+};
+
+// ---------- Honour board: clubhouse wood and gold leaf ----------
+
+const woodGrain = (ctx: CanvasRenderingContext2D, rand: () => number, color: string) => {
+  ctx.strokeStyle = color;
+  for (let y = -40; y < H + 40; y += 9 + rand() * 10) {
+    ctx.lineWidth = 1 + rand() * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.bezierCurveTo(W * 0.3, y + (rand() - 0.5) * 30, W * 0.7, y + (rand() - 0.5) * 30, W, y + (rand() - 0.5) * 20);
+    ctx.stroke();
+  }
+};
+
+const GOLD = '#e2b852';
+
+const honourBoard: Theme = {
+  label: 'Honour board',
+  background: ctx => {
+    const rand = mulberry32(55);
+    const mahogany = ctx.createLinearGradient(0, 0, W, H);
+    mahogany.addColorStop(0, '#4a2412');
+    mahogany.addColorStop(1, '#2a130a');
+    ctx.fillStyle = mahogany;
+    ctx.fillRect(0, 0, W, H);
+    woodGrain(ctx, rand, 'rgba(0, 0, 0, 0.18)');
+    clipped(ctx, lightsShape, () => {
+      // Lights are painted on a cream enamel panel.
+      const cream = ctx.createLinearGradient(0, HEADER, 0, H);
+      cream.addColorStop(0, '#f4ead2');
+      cream.addColorStop(1, '#e6d6b0');
+      ctx.fillStyle = cream;
+      ctx.fillRect(0, 0, W, H);
+      woodGrain(ctx, rand, 'rgba(120, 80, 30, 0.06)');
+    });
+    // Gold moulding around the board.
+    ctx.strokeStyle = GOLD;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(22, HEADER + 18, W - 44, H - HEADER - 40);
+    ctx.lineWidth = 2;
+    ctx.strokeRect(34, HEADER + 30, W - 68, H - HEADER - 64);
+    fillPattern(ctx, grain(14, 61));
+    headerBand(ctx, '#2a130a');
   },
   overlay: ctx => {
-    ctx.font = `700 22px ${SERIF}`;
-    ctx.letterSpacing = '3px';
+    ctx.font = `700 22px ${ENGRAVED}`;
+    ctx.letterSpacing = '4px';
     ctx.textBaseline = 'middle';
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#6b6153';
-    ctx.fillText('LATE EDITION', 52, H - 26);
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#9d9583';
-    ctx.fillText('PRICE: ONE PINT', W - 52, H - 26);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = GOLD;
+    ctx.fillText('DADS ARMY ICE HOCKEY CLUB', W / 2, H - 9);
   },
-  headerTitle: 'DADS ARMY GAZETTE',
-  headerDate: 'TEAMS ANNOUNCED',
-  headerFont: px => `italic 900 ${px}px ${MASTHEAD}`,
-  headerText: '#111111',
-  headerSub: '#6b6153',
-  rule: ['#111111', PAPER],
-  lights: { title: '#111111', sub: '#6b6153', pill: 'rgba(0, 0, 0, 0.035)', pillText: '#141414', pillStroke: 'rgba(0, 0, 0, 0.35)' },
-  darks: { title: PAPER, sub: '#b8b09c', pill: 'rgba(255, 255, 255, 0.06)', pillText: PAPER, pillStroke: 'rgba(239, 233, 218, 0.35)' },
-  slash: { kind: 'line', color: '#b3261e', width: 10 },
-  vs: { fill: PAPER, ring: '#111111', text: '#111111' },
-  goalie: { fill: '#b3261e', text: '#ffffff' },
-  titleFont: px => `italic 900 ${Math.round(px * 0.95)}px ${MASTHEAD}`,
-  subFont: px => `700 ${Math.round(px * 0.8)}px ${SERIF}`,
-  nameFont: px => `${Math.round(px * 0.88)}px ${SERIF}`,
-  pillRadius: 0
-};
-
-// ---------- Frozen: frosted ice and cracks ----------
-
-/** A frost crystal: a line that splits into smaller branches. */
-const frost = (ctx: CanvasRenderingContext2D, rand: () => number, x: number, y: number, angle: number, len: number, depth: number) => {
-  const x2 = x + Math.cos(angle) * len;
-  const y2 = y + Math.sin(angle) * len;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-  if (depth <= 0) return;
-  for (const turn of [-1, 1]) {
-    const at = 0.35 + rand() * 0.45;
-    frost(ctx, rand, x + (x2 - x) * at, y + (y2 - y) * at, angle + turn * (0.9 + rand() * 0.3), len * 0.45, depth - 1);
-  }
-  frost(ctx, rand, x2, y2, angle + (rand() - 0.5) * 0.6, len * 0.7, depth - 1);
-};
-
-const frozen: Theme = {
-  label: 'Frozen',
-  background: ctx => {
-    const ice = ctx.createLinearGradient(0, HEADER, W * 0.6, H);
-    ice.addColorStop(0, '#f6fcff');
-    ice.addColorStop(1, '#cfe8f2');
-    ctx.fillStyle = ice;
-    ctx.fillRect(0, 0, W, H);
-    const rand = mulberry32(41);
-    clipped(ctx, lightsShape, () => {
-      // Frost creeping in from the edges.
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 26; i++) {
-        const edge = rand();
-        const [x, y, a] =
-          edge < 0.45 ? [0, HEADER + rand() * (H - HEADER), (rand() - 0.5) * 1.2]
-          : edge < 0.75 ? [rand() * W * 0.6, H, -Math.PI / 2 + (rand() - 0.5) * 1.2]
-          : [rand() * W * 0.6, HEADER, Math.PI / 2 + (rand() - 0.5) * 1.2];
-        ctx.strokeStyle = rand() < 0.5 ? 'rgba(255, 255, 255, 0.9)' : 'rgba(120, 190, 215, 0.35)';
-        frost(ctx, rand, x, y, a, 80 + rand() * 120, 3);
-      }
-    });
-    clipped(ctx, darksShape, () => {
-      const deep = ctx.createLinearGradient(W, HEADER, W * 0.4, H);
-      deep.addColorStop(0, '#0d4740');
-      deep.addColorStop(1, '#062521');
-      ctx.fillStyle = deep;
-      ctx.fillRect(0, 0, W, H);
-      // Cracks through the ice.
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 9; i++) {
-        let x = SLASH_BOTTOM + rand() * (W - SLASH_BOTTOM);
-        let y = HEADER + rand() * (H - HEADER);
-        ctx.strokeStyle = `rgba(190, 240, 255, ${0.12 + rand() * 0.15})`;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        for (let s = 0; s < 12; s++) {
-          x += (rand() - 0.5) * 90;
-          y += (rand() - 0.3) * 70;
-          ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-      }
-    });
-    fillPattern(ctx, grain(16, 43));
-    headerBand(ctx, '#05221f');
-  },
-  headerTitle: 'LIGHTS VS DARKS',
+  headerTitle: 'LIGHTS V DARKS',
   headerDate: '',
-  headerFont: px => `800 ${Math.round(px * 1.1)}px ${DISPLAY}`,
-  headerSub: '#9fe2ef',
-  rule: ['#e6fbff', '#7fd6e8'],
-  lights: { title: '#0b4f5f', sub: '#3a8ca0', pill: 'rgba(255, 255, 255, 0.62)', pillText: '#0b3d4a', pillStroke: 'rgba(255, 255, 255, 0.95)' },
-  darks: { title: '#e6fbff', sub: '#8fd9e8', pill: 'rgba(230, 251, 255, 0.08)', pillText: '#e6fbff', pillStroke: 'rgba(143, 217, 232, 0.32)' },
-  slash: { kind: 'glow', color: '#bff3ff', width: 10 },
-  vs: { fill: '#e6fbff', ring: '#7fd6e8', text: '#0b4f5f' },
-  goalie: { fill: '#7fd6e8', text: '#05221f' },
-  titleFont: px => `800 ${px}px ${DISPLAY}`,
-  subFont: px => `600 ${px}px ${DISPLAY}`,
-  nameFont: px => `600 ${Math.round(px * 0.95)}px ${BODY}`,
-  pillRadius: 14
+  headerFont: px => `900 ${Math.round(px * 0.92)}px ${ENGRAVED}`,
+  headerText: GOLD,
+  headerSub: '#c9a25a',
+  rule: [GOLD, '#2a130a'],
+  lights: { title: '#3a2210', sub: '#8a6a2f', pill: 'rgba(160, 120, 50, 0.08)', pillText: '#2e1b0c', pillStroke: 'rgba(140, 100, 40, 0.45)' },
+  darks: { title: GOLD, sub: '#c9a25a', pill: 'rgba(226, 184, 82, 0.06)', pillText: GOLD, pillStroke: 'rgba(226, 184, 82, 0.4)' },
+  slash: { kind: 'line', color: GOLD, width: 12 },
+  vs: { fill: GOLD, ring: '#7a5a1c', text: '#2a130a' },
+  goalie: { fill: GOLD, text: '#2a130a' },
+  titleFont: px => `900 ${Math.round(px * 0.82)}px ${ENGRAVED}`,
+  subFont: px => `700 ${Math.round(px * 0.8)}px ${ENGRAVED}`,
+  nameFont: px => `700 ${Math.round(px * 0.8)}px ${ENGRAVED}`,
+  pillRadius: 2
 };
 
-// ---------- Jumbotron: an animated arena scoreboard ----------
+// ---------- Neon: signs on a brick wall, flickering on as a GIF ----------
 
-const AMBER = '#ffcf40';
-
-const jumbotron: Theme = {
-  label: 'Jumbotron',
+const neon: Theme = {
+  label: 'Neon',
   animated: true,
-  led: { cell: 6 },
   background: ctx => {
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = '#120a09';
     ctx.fillRect(0, 0, W, H);
-    clipped(ctx, lightsShape, () => {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.07)';
-      ctx.fillRect(0, 0, W, H);
-    });
+    // Brick courses with staggered joints.
+    const rand = mulberry32(88);
+    const bh = 54;
+    const bw = 140;
+    for (let row = 0; row * bh < H; row++) {
+      const offset = row % 2 ? bw / 2 : 0;
+      for (let x = -offset; x < W; x += bw) {
+        const shade = 30 + Math.floor(rand() * 18);
+        ctx.fillStyle = `rgb(${shade + 22}, ${shade - 6}, ${shade - 10})`;
+        ctx.fillRect(x + 3, row * bh + 3, bw - 6, bh - 6);
+      }
+    }
+    fillPattern(ctx, grain(40, 71));
+    // Darken towards the edges, with a hint of green spill on the Darks side.
+    const v = ctx.createRadialGradient(W / 2, H * 0.5, H * 0.2, W / 2, H * 0.5, H * 0.75);
+    v.addColorStop(0, 'rgba(0, 0, 0, 0.35)');
+    v.addColorStop(1, 'rgba(0, 0, 0, 0.8)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0, 0, W, H);
     clipped(ctx, darksShape, () => {
-      ctx.fillStyle = 'rgba(61, 255, 110, 0.07)';
+      ctx.fillStyle = 'rgba(57, 255, 106, 0.05)';
       ctx.fillRect(0, 0, W, H);
     });
-  },
-  // Chasing bulbs around the edge of the board.
-  overlay: (ctx, t) => {
-    const step = Math.floor(t * 36);
-    const inset = 14;
-    const gap = 27;
-    const points: [number, number][] = [];
-    for (let x = inset; x <= W - inset; x += gap) points.push([x, inset]);
-    for (let y = inset + gap; y <= H - inset; y += gap) points.push([W - inset, y]);
-    for (let x = W - inset - gap; x >= inset; x -= gap) points.push([x, H - inset]);
-    for (let y = H - inset - gap; y > inset; y -= gap) points.push([inset, y]);
-    points.forEach(([x, y], i) => {
-      const lit = (i + step) % 4 < 2;
-      ctx.fillStyle = lit ? AMBER : '#3a2f0a';
-      ctx.shadowColor = lit ? AMBER : 'transparent';
-      ctx.shadowBlur = lit ? 12 : 0;
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.shadowBlur = 0;
+    headerBand(ctx, 'rgba(0, 0, 0, 0.55)');
   },
   headerTitle: 'LIGHTS VS DARKS',
-  headerDate: 'FACE-OFF TONIGHT',
-  headerFont: px => `800 ${Math.round(px * 1.05)}px ${DISPLAY}`,
-  headerText: AMBER,
-  headerSub: '#ff8a2a',
-  rule: [AMBER, '#ff3b30'],
-  lights: { title: '#ffffff', sub: AMBER, pill: 'rgba(255, 255, 255, 0.05)', pillText: '#ffffff' },
-  darks: { title: '#3dff6e', sub: AMBER, pill: 'rgba(61, 255, 110, 0.05)', pillText: '#3dff6e' },
-  slash: { kind: 'line', color: AMBER, width: 14 },
-  vs: { fill: '#ff3b30', ring: AMBER, text: '#ffffff' },
-  goalie: { fill: AMBER, text: '#000000' },
-  titleFont: px => `800 ${px}px ${DISPLAY}`,
-  subFont: px => `700 ${Math.round(px * 1.2)}px ${DISPLAY}`,
-  nameFont: px => `700 ${Math.round(px * 1.25)}px ${DISPLAY}`,
-  pillRadius: 0
+  headerDate: 'OPEN TONIGHT',
+  headerFont: px => `${px}px ${NEON}`,
+  headerText: '#ff4fa3',
+  headerSub: '#ffcf40',
+  rule: ['#ff4fa3', '#1a0d0c'],
+  lights: { title: '#eaf6ff', sub: '#9fd4ff', pill: 'rgba(0, 0, 0, 0)', pillText: '#eaf6ff' },
+  darks: { title: '#39ff6a', sub: '#9dffb6', pill: 'rgba(0, 0, 0, 0)', pillText: '#39ff6a' },
+  slash: { kind: 'glow', color: '#ffcf40', width: 9 },
+  vs: { fill: '#1a0d0c', ring: '#ff3355', text: '#ff3355' },
+  goalie: { fill: '#ffcf40', text: '#1a0d0c' },
+  titleFont: px => `${Math.round(px * 1.02)}px ${NEON}`,
+  subFont: px => `${Math.round(px * 0.95)}px ${NEON}`,
+  nameFont: px => `${Math.round(px * 1.02)}px ${NEON}`,
+  pillRadius: 0,
+  glow: 22,
+  unlit: 'rgba(210, 200, 200, 0.14)'
 };
 
 export type GraphicDesign =
@@ -724,9 +716,9 @@ export type GraphicDesign =
   | 'dossier'
   | 'nightvision'
   | 'chalkboard'
-  | 'backpage'
-  | 'frozen'
-  | 'jumbotron';
+  | 'comic'
+  | 'honour'
+  | 'neon';
 
 export const THEMES: Record<GraphicDesign, Theme> = {
   rink,
@@ -734,9 +726,9 @@ export const THEMES: Record<GraphicDesign, Theme> = {
   dossier,
   nightvision: nightVision,
   chalkboard,
-  backpage: backPage,
-  frozen,
-  jumbotron
+  comic,
+  honour: honourBoard,
+  neon
 };
 
 export const GRAPHIC_DESIGNS = (Object.keys(THEMES) as GraphicDesign[]).map(value => ({

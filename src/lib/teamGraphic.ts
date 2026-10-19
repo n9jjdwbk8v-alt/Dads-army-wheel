@@ -18,11 +18,12 @@ export { GRAPHIC_DESIGNS, type GraphicDesign } from './graphicThemes';
 const PAD = 70;
 const GAP = 44;
 
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-/** Progress of a step that runs from `start` for `length` of the animation. */
-const phase = (t: number, start: number, length: number) => clamp01((t - start) / length);
-/** The first part of `text`, as if typed out over that step. */
-const typed = (text: string, progress: number) => text.slice(0, Math.ceil(text.length * progress));
+/** Whether a neon part is lit at time `t`: dark before `start`, flickering briefly, then steady. */
+const neonLit = (t: number, start: number, seed: number) => {
+  if (t >= start + 0.1) return true;
+  if (t < start) return false;
+  return (Math.floor((t - start) * 120) * 7 + seed * 5) % 4 < 2;
+};
 
 const fit = (ctx: CanvasRenderingContext2D, text: string, max: number) => {
   if (ctx.measureText(text).width <= max) return text;
@@ -42,11 +43,16 @@ const loadLogo = () =>
 
 const loadFonts = () => Promise.all(FONT_LOADS.map(f => document.fonts.load(f))).catch(() => undefined);
 
+const newCanvas = (w: number, h: number) => {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  return c;
+};
+
 /** The logo recoloured to a single tint (used for night vision). */
 const tinted = (logo: HTMLImageElement, color: string) => {
-  const c = document.createElement('canvas');
-  c.width = logo.width;
-  c.height = logo.height;
+  const c = newCanvas(logo.width, logo.height);
   const g = c.getContext('2d')!;
   g.drawImage(logo, 0, 0);
   g.globalCompositeOperation = 'color';
@@ -62,9 +68,7 @@ type Assets = { theme: Theme; background: HTMLCanvasElement; logo: CanvasImageSo
 const prepare = async (design: GraphicDesign): Promise<Assets> => {
   const [logo] = await Promise.all([loadLogo(), loadFonts()]);
   const theme = THEMES[design];
-  const background = document.createElement('canvas');
-  background.width = W;
-  background.height = H;
+  const background = newCanvas(W, H);
   theme.background(background.getContext('2d')!, logo);
   return {
     theme,
@@ -74,12 +78,24 @@ const prepare = async (design: GraphicDesign): Promise<Assets> => {
   };
 };
 
-const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme) => {
-  const { kind, color, width } = theme.slash;
+/**
+ * Sets up glow for a part of the picture and returns the colour to draw it in. Without a theme glow this is just
+ * `color`; on a neon theme an unlit part is drawn as a dark tube.
+ */
+const lightUp = (ctx: CanvasRenderingContext2D, theme: Theme, color: string, on: boolean) => {
+  if (!theme.glow) return color;
+  ctx.shadowColor = on ? color : 'transparent';
+  ctx.shadowBlur = on ? theme.glow : 0;
+  return on ? color : (theme.unlit ?? color);
+};
+
+const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, on: boolean) => {
+  const { kind, width } = theme.slash;
+  const color = on ? theme.slash.color : (theme.unlit ?? theme.slash.color);
   ctx.save();
+  ctx.strokeStyle = color;
   if (kind === 'chalk') {
     // A few rough passes, each slightly off the line, like a stick of chalk.
-    ctx.strokeStyle = color;
     ctx.lineCap = 'round';
     for (const [dx, w] of [[-3, 0.5], [2, 0.7], [0, 0.4], [4, 0.3]]) {
       ctx.lineWidth = width * w;
@@ -88,90 +104,132 @@ const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme) => {
       ctx.lineTo(SLASH_BOTTOM + dx, H);
       ctx.stroke();
     }
-    ctx.restore();
-    return;
+  } else {
+    if (kind === 'glow' && on) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 28;
+    }
+    ctx.lineWidth = width;
+    ctx.lineCap = 'butt';
+    ctx.beginPath();
+    ctx.moveTo(SLASH_TOP, HEADER);
+    ctx.lineTo(SLASH_BOTTOM, H);
+    ctx.stroke();
   }
-  if (kind === 'glow') {
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 28;
-  }
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.lineCap = 'butt';
+  ctx.restore();
+};
+
+const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, on: boolean) => {
+  ctx.save();
   ctx.beginPath();
-  ctx.moveTo(SLASH_TOP, HEADER);
-  ctx.lineTo(SLASH_BOTTOM, H);
+  if (theme.vs.shape === 'burst') {
+    // A comic-book starburst.
+    const spikes = 14;
+    for (let i = 0; i <= spikes * 2; i++) {
+      const r = i % 2 ? 58 : 84;
+      const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+      if (i === 0) ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      else ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+    }
+    ctx.closePath();
+  } else {
+    ctx.arc(x, y, 56, 0, Math.PI * 2);
+  }
+  ctx.fillStyle = theme.vs.fill;
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = lightUp(ctx, theme, theme.vs.ring, on);
   ctx.stroke();
+  ctx.fillStyle = lightUp(ctx, theme, theme.vs.text, on);
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '1px';
+  ctx.font = theme.titleFont(54);
+  ctx.fillText('VS', x, y + 3);
   ctx.restore();
 };
 
 /**
- * Draws the line-up. For animated designs `t` runs 0 → 1 as the titles and names type themselves in;
+ * Draws the line-up. On an animated (neon) design, `t` runs 0 → 1 as each part flickers on in turn;
  * 1 is the finished picture.
  */
 const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, date: Date, t: number) => {
   const { theme } = a;
-  const at = (start: number, length: number) => (theme.animated ? phase(t, start, length) : 1);
+  const lit = (start: number, seed: number) => !theme.animated || neonLit(t, start, seed);
   ctx.save();
   ctx.drawImage(a.background, 0, 0);
   ctx.textBaseline = 'middle';
 
   // Header: logo, title and date.
+  const headerOn = lit(0.04, 1);
   ctx.fillStyle = theme.rule[0];
   ctx.fillRect(0, HEADER - 14, W, 8);
   ctx.fillStyle = theme.rule[1];
   ctx.fillRect(0, HEADER - 6, W, 6);
   if (a.logo) {
     const h = HEADER - 52;
+    ctx.globalAlpha = headerOn ? 1 : 0.35;
     ctx.drawImage(a.logo, PAD - 16, 20, h * a.logoAspect, h);
+    ctx.globalAlpha = 1;
   }
   const dateText = date.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase();
   // Header text sits right of the logo, shrunk if a long title or wide font would reach it.
   const headerRoom = W - PAD - (PAD - 16 + (HEADER - 52) * a.logoAspect + 30);
   ctx.textAlign = 'right';
-  ctx.fillStyle = theme.headerText ?? '#ffffff';
   ctx.letterSpacing = '3px';
   ctx.font = theme.headerFont(62);
   const titleWidth = ctx.measureText(theme.headerTitle).width;
   if (titleWidth > headerRoom) ctx.font = theme.headerFont(Math.floor((62 * headerRoom) / titleWidth));
+  ctx.fillStyle = lightUp(ctx, theme, theme.headerText ?? '#ffffff', headerOn);
   ctx.fillText(theme.headerTitle, W - PAD, 92);
   ctx.letterSpacing = '4px';
   ctx.font = theme.subFont(34);
-  ctx.fillStyle = theme.headerSub ?? 'rgba(255, 255, 255, 0.7)';
+  ctx.fillStyle = lightUp(ctx, theme, theme.headerSub ?? 'rgba(255, 255, 255, 0.7)', headerOn);
   ctx.fillText([theme.headerDate, dateText].filter(Boolean).join(' · '), W - PAD, 160);
+  ctx.shadowBlur = 0;
 
-  drawSlash(ctx, theme);
+  drawSlash(ctx, theme, lit(0.14, 2));
 
   // Team titles, shrunk if a wide font would run under the VS badge.
   const titleY = HEADER + 95;
   const vsY = titleY + 20;
   const vsX = slashX(vsY);
+  const vsRadius = theme.vs.shape === 'burst' ? 84 : 56;
   ctx.letterSpacing = '4px';
   ctx.font = theme.titleFont(104);
   const room = Math.min(
-    (vsX - 56 - 24 - PAD) / ctx.measureText('LIGHTS').width,
-    (W - PAD - (vsX + 56 + 24)) / ctx.measureText('DARKS').width,
+    (vsX - vsRadius - 24 - PAD) / ctx.measureText('LIGHTS').width,
+    (W - PAD - (vsX + vsRadius + 24)) / ctx.measureText('DARKS').width,
     1
   );
   ctx.font = theme.titleFont(Math.floor(104 * room));
-  const titles = at(0.08, 0.2);
-  ctx.textAlign = 'left';
-  ctx.fillStyle = theme.lights.title;
-  ctx.fillText(typed('LIGHTS', titles), PAD, titleY);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = theme.darks.title;
-  ctx.fillText(typed('DARKS', titles), W - PAD, titleY);
+  const title = (text: string, x: number, align: CanvasTextAlign, color: string, on: boolean) => {
+    ctx.textAlign = align;
+    if (theme.titleStroke) {
+      ctx.lineWidth = theme.titleStroke.width;
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = theme.titleStroke.color;
+      ctx.strokeText(text, x, titleY);
+    }
+    ctx.fillStyle = lightUp(ctx, theme, color, on);
+    ctx.fillText(text, x, titleY);
+    ctx.shadowBlur = 0;
+  };
+  const lightsTitleOn = lit(0.24, 3);
+  const darksTitleOn = lit(0.3, 4);
+  title('LIGHTS', PAD, 'left', theme.lights.title, lightsTitleOn);
+  title('DARKS', W - PAD, 'right', theme.darks.title, darksTitleOn);
   ctx.letterSpacing = '2px';
   ctx.font = theme.subFont(30);
   ctx.textAlign = 'left';
-  ctx.fillStyle = theme.lights.sub;
-  ctx.fillText(typed(`${teams.light.length} PLAYERS`, titles), PAD + 4, titleY + 70);
+  ctx.fillStyle = lightUp(ctx, theme, theme.lights.sub, lightsTitleOn);
+  ctx.fillText(`${teams.light.length} PLAYERS`, PAD + 4, titleY + 70);
   ctx.textAlign = 'right';
-  ctx.fillStyle = theme.darks.sub;
-  ctx.fillText(typed(`${teams.dark.length} PLAYERS`, titles), W - PAD - 4, titleY + 70);
+  ctx.fillStyle = lightUp(ctx, theme, theme.darks.sub, darksTitleOn);
+  ctx.fillText(`${teams.dark.length} PLAYERS`, W - PAD - 4, titleY + 70);
+  ctx.shadowBlur = 0;
 
-  // VS badge on the slash.
-  if (at(0.3, 0.01) >= 1) drawVs(ctx, theme, vsX, vsY);
+  drawVs(ctx, theme, vsX, vsY, lit(0.38, 5));
 
   // Names, sized so the longer team fits.
   const top = titleY + 140;
@@ -182,11 +240,12 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
   const badgeR = lh * 0.27;
   ctx.letterSpacing = '0px';
 
-  const goalieBadge = (cx: number, y: number) => {
-    ctx.fillStyle = theme.goalie.fill;
+  const goalieBadge = (cx: number, y: number, on: boolean) => {
+    ctx.fillStyle = lightUp(ctx, theme, theme.goalie.fill, on);
     ctx.beginPath();
     ctx.arc(cx, y, badgeR, 0, Math.PI * 2);
     ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.fillStyle = theme.goalie.text;
     ctx.textAlign = 'center';
     ctx.font = theme.titleFont(Math.round(badgeR * 1.3));
@@ -201,128 +260,37 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     ctx.fill();
     if (side.pillStroke) {
       ctx.strokeStyle = side.pillStroke;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = theme.pillStrokeWidth ?? 2;
       ctx.stroke();
     }
   };
 
-  const rowTyping = (i: number) => at(0.34 + (i / rows) * 0.46, 0.18);
-
   teams.light.forEach((p, i) => {
-    const shown = rowTyping(i);
-    if (shown <= 0) return;
+    const on = lit(0.44 + (i / rows) * 0.4, 10 + i);
     const y = top + lh * i + lh / 2;
     const edge = Math.min(slashX(y - lh / 2), slashX(y + lh / 2)) - GAP;
     pill(PAD - 18, y, edge - PAD + 18, theme.lights);
-    const indent = isGoalie(p) ? goalieBadge(PAD + badgeR, y) : 0;
+    const indent = isGoalie(p) ? goalieBadge(PAD + badgeR, y, on) : 0;
     ctx.font = theme.nameFont(size);
-    ctx.fillStyle = theme.lights.pillText;
+    ctx.fillStyle = lightUp(ctx, theme, theme.lights.pillText, on);
     ctx.textAlign = 'left';
-    ctx.fillText(typed(fit(ctx, p.name, edge - PAD - 12 - indent), shown), PAD + indent, y + 1);
+    ctx.fillText(fit(ctx, p.name, edge - PAD - 12 - indent), PAD + indent, y + 1);
+    ctx.shadowBlur = 0;
   });
 
   teams.dark.forEach((p, i) => {
-    const shown = rowTyping(i);
-    if (shown <= 0) return;
+    const on = lit(0.47 + (i / rows) * 0.4, 30 + i);
     const y = top + lh * i + lh / 2;
     const edge = Math.max(slashX(y - lh / 2), slashX(y + lh / 2)) + GAP;
     pill(edge, y, W - PAD + 18 - edge, theme.darks);
-    const indent = isGoalie(p) ? goalieBadge(W - PAD - badgeR, y) : 0;
+    const indent = isGoalie(p) ? goalieBadge(W - PAD - badgeR, y, on) : 0;
     ctx.font = theme.nameFont(size);
-    ctx.fillStyle = theme.darks.pillText;
+    ctx.fillStyle = lightUp(ctx, theme, theme.darks.pillText, on);
     ctx.textAlign = 'right';
-    ctx.fillText(typed(fit(ctx, p.name, W - PAD - edge - 12 - indent), shown), W - PAD - indent, y + 1);
+    ctx.fillText(fit(ctx, p.name, W - PAD - edge - 12 - indent), W - PAD - indent, y + 1);
+    ctx.shadowBlur = 0;
   });
-  ctx.restore();
-};
 
-const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number) => {
-  ctx.fillStyle = theme.vs.fill;
-  ctx.beginPath();
-  ctx.arc(x, y, 56, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = theme.vs.ring;
-  ctx.stroke();
-  ctx.fillStyle = theme.vs.text;
-  ctx.textAlign = 'center';
-  ctx.letterSpacing = '1px';
-  ctx.font = theme.titleFont(54);
-  ctx.fillText('VS', x, y + 3);
-};
-
-const newCanvas = (w: number, h: number) => {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return c;
-};
-
-/**
- * Re-draws `source` as a board of LEDs, one per `cell` source pixels, onto `ctx` (whose canvas may be smaller).
- * During the first moments of an animation the board powers on from the top down.
- */
-const ledBoard = (ctx: CanvasRenderingContext2D, source: HTMLCanvasElement, cell: number, t: number) => {
-  const cols = W / cell;
-  const rows = H / cell;
-  const sample = newCanvas(cols, rows);
-  const sctx = sample.getContext('2d', { willReadFrequently: true })!;
-  sctx.imageSmoothingQuality = 'high';
-  sctx.drawImage(source, 0, 0, cols, rows);
-  const px = sctx.getImageData(0, 0, cols, rows).data;
-
-  // Paint the LEDs straight into pixels: each is a square one pixel smaller than its pitch.
-  const { width, height } = ctx.canvas;
-  const pitch = Math.floor(width / cols);
-  const dot = Math.max(1, pitch - 1);
-  const dots = new ImageData(width, height);
-  const out = dots.data;
-  for (let i = 0; i < out.length; i += 4) out.set([2, 3, 2, 255], i);
-  const poweredRows = rows * phase(t, 0, 0.1);
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      const i = (r * cols + c) * 4;
-      const peak = Math.max(px[i], px[i + 1], px[i + 2]);
-      let rgb = [17, 22, 17];
-      // Faint edge pixels stay off so letters come out crisp rather than smudged.
-      if (peak >= 80 && r <= poweredRows) {
-        // Push lit LEDs towards full brightness so the board glows.
-        const boost = Math.min(255 / peak, 1.7);
-        rgb = [px[i] * boost, px[i + 1] * boost, px[i + 2] * boost];
-      }
-      for (let y = 0; y < dot; y++) {
-        let o = ((r * pitch + y) * width + c * pitch) * 4;
-        for (let x = 0; x < dot; x++, o += 4) {
-          out[o] = rgb[0];
-          out[o + 1] = rgb[1];
-          out[o + 2] = rgb[2];
-        }
-      }
-    }
-  }
-  const board = newCanvas(width, height);
-  board.getContext('2d')!.putImageData(dots, 0, 0);
-  ctx.drawImage(board, 0, 0);
-  // Soft bloom around lit LEDs.
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.globalAlpha = 0.4;
-  ctx.filter = `blur(${pitch}px)`;
-  ctx.drawImage(board, 0, 0);
-  ctx.restore();
-};
-
-/** Draws one frame at time `t` onto `ctx`, whose canvas is the picture scaled by `scale`. */
-const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, date: Date, t: number, scale: number) => {
-  const { theme } = a;
-  if (theme.led) {
-    const full = newCanvas(W, H);
-    drawPicture(full.getContext('2d')!, teams, a, date, t);
-    ledBoard(ctx, full, theme.led.cell, t);
-  }
-  ctx.save();
-  ctx.scale(scale, scale);
-  if (!theme.led) drawPicture(ctx, teams, a, date, t);
   theme.overlay?.(ctx, t);
   ctx.restore();
 };
@@ -331,7 +299,7 @@ const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
 export const drawTeamsGraphic = async (teams: Teams, design: GraphicDesign, date = new Date()): Promise<Blob> => {
   const assets = await prepare(design);
   const canvas = newCanvas(W, H);
-  renderFrame(canvas.getContext('2d')!, teams, assets, date, 1, 1);
+  drawPicture(canvas.getContext('2d')!, teams, assets, date, 1);
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not render image'))), 'image/png')
   );
@@ -356,8 +324,10 @@ export const makeTeamsGif = async (teams: Teams, design: GraphicDesign, date = n
   const times = [1, ...Array.from({ length: GIF_FRAMES }, (_, i) => i / (GIF_FRAMES - 1))];
   const frames: Uint8ClampedArray[] = [];
   for (const [i, t] of times.entries()) {
-    ctx.clearRect(0, 0, gw, gh);
-    renderFrame(ctx, teams, assets, date, t, GIF_SCALE);
+    ctx.save();
+    ctx.scale(GIF_SCALE, GIF_SCALE);
+    drawPicture(ctx, teams, assets, date, t);
+    ctx.restore();
     frames.push(ctx.getImageData(0, 0, gw, gh).data);
     // Yield now and then so the page stays responsive while frames render.
     if (i % 6 === 5) await new Promise(r => setTimeout(r));

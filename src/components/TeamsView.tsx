@@ -69,6 +69,10 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
   const key = `${idsKey(teams.light)}|${idsKey(teams.dark)}|${design}`;
 
   const animated = GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
+  const stepDesign = (by: number) => {
+    const i = GRAPHIC_DESIGNS.findIndex(d => d.value === design);
+    setDesign(GRAPHIC_DESIGNS[(i + by + GRAPHIC_DESIGNS.length) % GRAPHIC_DESIGNS.length].value);
+  };
   const picture = useRendered(key, ready, () => (animated ? makeTeamsGif : drawTeamsGraphic)(teams, design));
   // Only share a picture made for the teams and style currently chosen; an older one is just a placeholder.
   const shareable = ready && picture?.key === key ? picture : null;
@@ -137,19 +141,28 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
 
       {ready && picture && (
         <div className="panel graphic">
-          <p className="graphic__label">Picture style</p>
-          <div className="chips" role="group" aria-label="Picture style">
-            {GRAPHIC_DESIGNS.map(d => (
-              <button
-                key={d.value}
-                className={d.value === design ? 'chip chip--on' : 'chip'}
-                aria-pressed={d.value === design}
-                onClick={() => setDesign(d.value)}
-              >
-                {d.label}
-                {d.animated && <span className="chip__tag">GIF</span>}
-              </button>
-            ))}
+          <label className="graphic__label" htmlFor="picture-style">
+            Picture style
+          </label>
+          <div className="style-picker">
+            <button className="style-picker__step" onClick={() => stepDesign(-1)} aria-label="Previous style">
+              ‹
+            </button>
+            <select
+              id="picture-style"
+              className="style-picker__select"
+              value={design}
+              onChange={e => setDesign(e.target.value as GraphicDesign)}
+            >
+              {GRAPHIC_DESIGNS.map(d => (
+                <option key={d.value} value={d.value}>
+                  {d.animated ? `${d.label} (animated GIF)` : d.label}
+                </option>
+              ))}
+            </select>
+            <button className="style-picker__step" onClick={() => stepDesign(1)} aria-label="Next style">
+              ›
+            </button>
           </div>
           <img
             src={picture.url}
