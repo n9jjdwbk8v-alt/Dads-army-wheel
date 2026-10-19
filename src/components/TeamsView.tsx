@@ -32,7 +32,7 @@ const shareText = (t: Teams) => {
   const date = new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
   const line = (team: Team, players: Player[]) =>
     `${team === 'light' ? '⚪' : '🟢'} ${TEAM_LABEL[team].toUpperCase()} (${players.length}): ${players.map(p => (isGoalie(p) ? `${p.name} (G)` : p.name)).join(', ')}`;
-  return `🏒 Dads Army — ${date}${t.danSmith ? '\n💣 DAN SMITH MODE' : ''}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
+  return `🏒 Dads Army — ${date}${t.danSmith ? '\nDAN SMITH MODE' : ''}\n\n${line('light', t.light)}\n${line('dark', t.dark)}`;
 };
 
 const idsKey = (players: Player[]) =>
