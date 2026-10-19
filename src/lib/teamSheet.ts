@@ -322,9 +322,11 @@ const drawSheet = async (details: GameDetails, entries: ListEntry[], goalies: Pl
   const note = details.kind === 'scrimmage';
   const starsY = note ? 1110 : 1200;
   const bottom = starsY - 54;
-  const gap = entries.length > 1 ? Math.min(40, (bottom - LIST_TOP) / (entries.length - 1)) : 40;
-  const size = Math.round(Math.min(36, gap * 0.92));
-  entries.forEach((entry, i) => drawEntry(ctx, entry, LIST_X, LIST_TOP + i * gap, size, 560));
+  // Spread a short list out a little and centre it in its space; squeeze a long one to fit.
+  const gap = entries.length > 1 ? Math.min(46, (bottom - LIST_TOP) / (entries.length - 1)) : 46;
+  const size = Math.round(Math.min(38, gap * 0.9));
+  const top = LIST_TOP + Math.max(0, (bottom - LIST_TOP - gap * (entries.length - 1)) / 2);
+  entries.forEach((entry, i) => drawEntry(ctx, entry, LIST_X, top + i * gap, size, 560));
 
   ctx.fillStyle = '#f4f4f0';
   for (let i = 0; i < 5; i++) star(ctx, LIST_X - 96 + i * 48, starsY, 22);

@@ -72,10 +72,11 @@ const linesText = (lineup: Lineup, details: GameDetails) => {
   return lines.join('\n');
 };
 
-type Sheet = 'squad' | 'sheet' | 'lines';
+/** Which picture the share panel shows: the whole squad or the squad split into lines. */
+type View = 'sheet' | 'lines';
 
 export default function GameDay({ players, setPlayers, gameDay, setGameDay }: GameDayProps) {
-  const [sheet, setSheet] = useState<Sheet>(() => (gameDay.available.length ? 'sheet' : 'squad'));
+  const [view, setView] = useState<View>('sheet');
 
   const set = (patch: Partial<GameDayState>) => setGameDay(g => ({ ...g, ...patch }));
   const available = new Set(gameDay.available);
@@ -106,140 +107,134 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
   const goalies = squad.filter(p => positionOf(p) === 'G');
   const detailsKey = [details.kind, details.opponent, details.date, details.time, details.venue];
 
+  // Flips the share panel between the team sheet and the lines (there are only two, so either arrow flips).
+  const flip = () => setView(v => (v === 'sheet' ? 'lines' : 'sheet'));
+  const switcher = (
+    <div className="sheet-switch">
+      <button className="sheet-switch__arrow" onClick={flip} aria-label="Previous sheet">
+        ‹
+      </button>
+      <div className="sheet-switch__title" aria-live="polite">
+        <span>{view === 'sheet' ? sheetTitle(gameDay.kind).join(' ') : 'Lines'}</span>
+        <span className="sheet-switch__dots" aria-hidden="true">
+          <i className={view === 'sheet' ? 'on' : ''} />
+          <i className={view === 'lines' ? 'on' : ''} />
+        </span>
+      </div>
+      <button className="sheet-switch__arrow" onClick={flip} aria-label="Next sheet">
+        ›
+      </button>
+    </div>
+  );
+
   return (
     <section className="gameday">
-      <nav className="tabs tabs--sub">
+      <div className="panel gameday__details">
         <RubberSegment
           items={[
-            { value: 'squad', label: `Squad (${squad.length})` },
-            { value: 'sheet', label: 'Team sheet' },
-            { value: 'lines', label: 'Lines' }
+            { value: 'game', label: 'Game · Team sheet' },
+            { value: 'scrimmage', label: 'Scrimmage' }
           ]}
-          value={sheet}
-          onChange={v => setSheet(v as Sheet)}
-          size="sm"
+          value={gameDay.kind}
+          onChange={v => set({ kind: v as SheetKind })}
           trackColor="#e3f3e9"
           thumbColor="#0f5132"
           textColor="#0f5132"
           activeTextColor="#ffffff"
-          aria-label="Game day sheet"
+          aria-label="Game or scrimmage"
         />
-      </nav>
+        <label className="field">
+          <span>{gameDay.kind === 'game' ? 'Opponent' : 'Name'}</span>
+          <input
+            className="text-input"
+            value={gameDay.opponent}
+            onChange={e => set({ opponent: e.target.value })}
+            placeholder={gameDay.kind === 'game' ? 'e.g. Ice Wolves' : 'e.g. Scrimmage Two'}
+            maxLength={40}
+          />
+        </label>
+        <div className="field-row">
+          <label className="field">
+            <span>Date</span>
+            <input className="text-input" type="date" value={gameDay.date} onChange={e => set({ date: e.target.value })} />
+          </label>
+          <label className="field">
+            <span>Face-off</span>
+            <input className="text-input" type="time" value={gameDay.time} onChange={e => set({ time: e.target.value })} />
+          </label>
+        </div>
+        <label className="field">
+          <span>Rink</span>
+          <input
+            className="text-input"
+            value={gameDay.venue}
+            onChange={e => set({ venue: e.target.value })}
+            placeholder="e.g. Planet Ice"
+            maxLength={40}
+          />
+        </label>
+      </div>
 
-      {sheet === 'squad' ? (
-        <>
-          <div className="panel gameday__details">
-            <RubberSegment
-              items={[
-                { value: 'game', label: 'Game · Team sheet' },
-                { value: 'scrimmage', label: 'Scrimmage' }
-              ]}
-              value={gameDay.kind}
-              onChange={v => set({ kind: v as SheetKind })}
-              trackColor="#e3f3e9"
-              thumbColor="#0f5132"
-              textColor="#0f5132"
-              activeTextColor="#ffffff"
-              aria-label="Game or scrimmage"
-            />
-            <label className="field">
-              <span>{gameDay.kind === 'game' ? 'Opponent' : 'Name'}</span>
-              <input
-                className="text-input"
-                value={gameDay.opponent}
-                onChange={e => set({ opponent: e.target.value })}
-                placeholder={gameDay.kind === 'game' ? 'e.g. Ice Wolves' : 'e.g. Scrimmage Two'}
-                maxLength={40}
-              />
-            </label>
-            <div className="field-row">
-              <label className="field">
-                <span>Date</span>
-                <input className="text-input" type="date" value={gameDay.date} onChange={e => set({ date: e.target.value })} />
-              </label>
-              <label className="field">
-                <span>Face-off</span>
-                <input className="text-input" type="time" value={gameDay.time} onChange={e => set({ time: e.target.value })} />
-              </label>
-            </div>
-            <label className="field">
-              <span>Rink</span>
-              <input
-                className="text-input"
-                value={gameDay.venue}
-                onChange={e => set({ venue: e.target.value })}
-                placeholder="e.g. Planet Ice"
-                maxLength={40}
-              />
-            </label>
-          </div>
-
-          <div className="panel">
-            <div className="roster-bar">
-              <p className="roster-count">
-                <strong>{squad.length}</strong> available · {count('F')} F · {count('D')} D · {count('G')} G
-              </p>
-              <div className="roster-actions">
-                <button className="btn btn--ghost" onClick={() => set({ available: players.map(p => p.id) })}>
-                  Tick all
-                </button>
-                <button className="btn btn--ghost" onClick={() => set({ available: [] })}>
-                  Clear
-                </button>
-              </div>
-            </div>
-            <p className="muted small">Tick who's available and set each player's position. Goalies are the players rated 0.</p>
-            {players.length === 0 ? (
-              <p className="empty">Add players on the Roster tab first.</p>
-            ) : (
-              <ul className="roster">
-                {sorted.map(p => {
-                  const pos = positionOf(p);
-                  return (
-                    <li key={p.id} className={available.has(p.id) ? 'roster__row' : 'roster__row roster__row--away'}>
-                      <SpringCheck
-                        label={p.name}
-                        checked={available.has(p.id)}
-                        onChange={on => toggle(p.id, on)}
-                        strike="none"
-                        doneOpacity={1}
-                        color="#0f5132"
-                        fillColor="#1f8a4c"
-                        checkColor="#ffffff"
-                        boxSize={22}
-                        fontSize={17}
-                        className="roster__check"
-                      />
-                      <div className="pos-picker" role="radiogroup" aria-label={`${p.name}'s position`}>
-                        {POSITIONS.map(o => (
-                          <button
-                            key={o.value}
-                            role="radio"
-                            aria-checked={pos === o.value}
-                            title={o.title}
-                            className={pos === o.value ? 'pos pos--on' : 'pos'}
-                            onClick={() => setPosition(p.id, o.value)}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <button className="btn btn--primary gameday__next" onClick={() => setSheet('sheet')} disabled={!squad.length}>
-              See team sheet →
+      <div className="panel">
+        <div className="roster-bar">
+          <p className="roster-count">
+            <strong>{squad.length}</strong> available · {count('F')} F · {count('D')} D · {count('G')} G
+          </p>
+          <div className="roster-actions">
+            <button className="btn btn--ghost" onClick={() => set({ available: players.map(p => p.id) })}>
+              Tick all
+            </button>
+            <button className="btn btn--ghost" onClick={() => set({ available: [] })}>
+              Clear
             </button>
           </div>
-        </>
-      ) : !squad.length ? (
-        <div className="panel">
-          <p className="empty">Tick who's available on the Squad sheet first.</p>
         </div>
-      ) : sheet === 'sheet' ? (
+        <p className="muted small">Tick who's available and set each player's position. Goalies are the players rated 0.</p>
+        {players.length === 0 ? (
+          <p className="empty">Add players on the Roster tab first.</p>
+        ) : (
+          <ul className="roster">
+            {sorted.map(p => {
+              const pos = positionOf(p);
+              return (
+                <li key={p.id} className={available.has(p.id) ? 'roster__row' : 'roster__row roster__row--away'}>
+                  <SpringCheck
+                    label={p.name}
+                    checked={available.has(p.id)}
+                    onChange={on => toggle(p.id, on)}
+                    strike="none"
+                    doneOpacity={1}
+                    color="#0f5132"
+                    fillColor="#1f8a4c"
+                    checkColor="#ffffff"
+                    boxSize={22}
+                    fontSize={17}
+                    className="roster__check"
+                  />
+                  <div className="pos-picker" role="radiogroup" aria-label={`${p.name}'s position`}>
+                    {POSITIONS.map(o => (
+                      <button
+                        key={o.value}
+                        role="radio"
+                        aria-checked={pos === o.value}
+                        title={o.title}
+                        className={pos === o.value ? 'pos pos--on' : 'pos'}
+                        onClick={() => setPosition(p.id, o.value)}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      {!squad.length ? null : view === 'sheet' ? (
         <SharePanel
+          header={switcher}
           drawKey={JSON.stringify(['squad', skaters, goalies, ...detailsKey])}
           draw={() => drawSquadSheet(details, skaters, goalies)}
           text={() => squadText(skaters, goalies, details)}
@@ -252,6 +247,7 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
         </SharePanel>
       ) : (
         <SharePanel
+          header={switcher}
           drawKey={JSON.stringify(['lines', lineup, ...detailsKey])}
           draw={() => drawLinesSheet(details, lineup)}
           text={() => linesText(lineup, details)}
@@ -393,6 +389,8 @@ function LineEditor({ lineup, edited, onChange, onReset }: LineEditorProps) {
 }
 
 type SharePanelProps = {
+  /** Shown at the top of the panel, above any controls. */
+  header?: ReactNode;
   /** Changes whenever the picture needs re-drawing. */
   drawKey: string;
   draw: () => Promise<Blob>;
@@ -403,7 +401,7 @@ type SharePanelProps = {
 };
 
 /** Controls, then the drawn sheet with Send, Download and Copy as text. */
-function SharePanel({ drawKey, draw, text, fileName, alt, children }: SharePanelProps) {
+function SharePanel({ header, drawKey, draw, text, fileName, alt, children }: SharePanelProps) {
   const [copied, setCopied] = useState(false);
   const picture = useRendered(drawKey, true, draw);
   const current = picture?.key === drawKey ? picture : null;
@@ -418,6 +416,7 @@ function SharePanel({ drawKey, draw, text, fileName, alt, children }: SharePanel
 
   return (
     <div className="panel graphic">
+      {header}
       {children}
       {picture && (
         <img src={picture.url} alt={alt} className={current ? 'graphic__img' : 'graphic__img graphic__img--updating'} />
