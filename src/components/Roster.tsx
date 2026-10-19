@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import ScrubField from './reactbits/ScrubField';
 import SpringCheck from './reactbits/SpringCheck';
 import { isGoalie, type Player } from '../lib/teams';
@@ -6,9 +6,10 @@ import { isGoalie, type Player } from '../lib/teams';
 type RosterProps = {
   players: Player[];
   setPlayers: (update: (players: Player[]) => Player[]) => void;
+  children?: ReactNode;
 };
 
-export default function Roster({ players, setPlayers }: RosterProps) {
+export default function Roster({ players, setPlayers, children }: RosterProps) {
   const [name, setName] = useState('');
   const [skill, setSkill] = useState(5);
   const [filter, setFilter] = useState('');
@@ -128,6 +129,7 @@ export default function Roster({ players, setPlayers }: RosterProps) {
           ))}
         </ul>
       )}
+      {children}
     </section>
   );
 }

@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import StarBorder from './reactbits/StarBorder';
 import SpotlightCard from './reactbits/SpotlightCard';
-import { isGoalie, splitTeams, TEAM_LABEL, type Player, type Team, type Teams } from '../lib/teams';
+import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import { drawTeamsGraphic, GRAPHIC_DESIGNS, type GraphicDesign } from '../lib/teamGraphic';
 import { usePersistentState } from '../lib/storage';
 
 type TeamsViewProps = {
   present: Player[];
   teams: Teams;
-  setTeams: (t: Teams) => void;
+  /** Earlier game nights, newest first, to avoid repeating. */
+  recent: GameRecord[];
+  onSplit: (t: Teams) => void;
+};
+
+const gameDate = (key: string) => {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
 const shareText = (t: Teams) => {
@@ -51,7 +58,7 @@ const useRendered = (key: string, enabled: boolean, render: () => Promise<Blob>)
   return out;
 };
 
-export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) {
+export default function TeamsView({ present, teams, recent, onSplit }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
   const [savedDesign, setDesign] = usePersistentState<GraphicDesign>('dads-army:graphic-design', 'rink');
   const design = GRAPHIC_DESIGNS.some(d => d.value === savedDesign) ? savedDesign : 'rink';
@@ -117,11 +124,14 @@ export default function TeamsView({ present, teams, setTeams }: TeamsViewProps) 
             textColor="#ffffff"
             className="cta"
             disabled={!enough}
-            onClick={() => setTeams(splitTeams(present))}
+            onClick={() => onSplit(splitTeams(present, recent))}
           >
             {hasTeams && !stale ? 'Reshuffle' : 'Split teams'}
           </StarBorder>
         </div>
+        {enough && recent.length > 0 && (
+          <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
+        )}
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
       </div>
 
