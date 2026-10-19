@@ -54,8 +54,8 @@ export type Theme = {
   label: string;
   /** Paints everything static: both halves and the header band. */
   background: (ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null) => void;
-  /** Drawn on top of everything else, every frame (stamps, scanlines, HUD). */
-  overlay?: (ctx: CanvasRenderingContext2D, t: number) => void;
+  /** Drawn on top of everything else (stamps, scanlines, HUD). */
+  overlay?: (ctx: CanvasRenderingContext2D) => void;
   headerTitle: string;
   headerDate: string;
   headerFont: (px: number) => string;
@@ -384,11 +384,11 @@ const nightVision: Theme = {
     fillPattern(ctx, grain(34, 9));
     headerBand(ctx, 'rgba(0, 0, 0, 0.6)');
   },
-  overlay: (ctx, t) => {
-    // Scanlines, a rolling bright band, vignette and HUD markings.
+  overlay: ctx => {
+    // Scanlines, a bright scan band, vignette and HUD markings.
     ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
     for (let y = 0; y < H; y += 4) ctx.fillRect(0, y, W, 2);
-    const bandY = ((t * 1.6) % 1) * (H + 200) - 100;
+    const bandY = H * 0.6;
     const band = ctx.createLinearGradient(0, bandY - 80, 0, bandY + 80);
     band.addColorStop(0, 'rgba(125, 255, 125, 0)');
     band.addColorStop(0.5, 'rgba(125, 255, 125, 0.06)');
@@ -427,12 +427,10 @@ const nightVision: Theme = {
     ctx.fillText('IR ON', W - m - 20, H - m - 26);
     ctx.textAlign = 'center';
     ctx.fillText('REC', W / 2 + 16, H - m - 26);
-    if (t === 1 || Math.floor(t * 6) % 2 === 0) {
-      ctx.fillStyle = '#ff4d4d';
-      ctx.beginPath();
-      ctx.arc(W / 2 - 42, H - m - 27, 9, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.fillStyle = '#ff4d4d';
+    ctx.beginPath();
+    ctx.arc(W / 2 - 42, H - m - 27, 9, 0, Math.PI * 2);
+    ctx.fill();
   },
   headerTitle: 'LIGHTS VS DARKS',
   headerDate: '',

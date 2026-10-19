@@ -1,4 +1,3 @@
-import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { isGoalie, type Teams } from './teams';
 import {
   FONT_LOADS,
@@ -17,12 +16,6 @@ export { GRAPHIC_DESIGNS, type GraphicDesign } from './graphicThemes';
 
 const PAD = 70;
 const GAP = 44;
-
-const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const easeOut = (v: number) => 1 - (1 - v) ** 3;
-const backOut = (v: number) => 1 + 2.4 * (v - 1) ** 3 + 1.4 * (v - 1) ** 2;
-/** Progress of a step that runs from `start` for `length` of the timeline. */
-const phase = (t: number, start: number, length: number) => clamp01((t - start) / length);
 
 const fit = (ctx: CanvasRenderingContext2D, text: string, max: number) => {
   if (ctx.measureText(text).width <= max) return text;
@@ -74,19 +67,17 @@ const prepare = async (design: GraphicDesign): Promise<Assets> => {
   };
 };
 
-const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, progress: number) => {
-  if (progress <= 0) return;
-  const endY = HEADER + (H - HEADER) * progress;
+const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme) => {
   const { kind, color, width } = theme.slash;
   ctx.save();
   if (kind === 'hazard') {
-    // A band of yellow and black tape, clipped to how far the slash has drawn.
+    // A band of yellow and black tape.
     const half = width / 2;
     ctx.beginPath();
     ctx.moveTo(SLASH_TOP - half, HEADER);
     ctx.lineTo(SLASH_TOP + half, HEADER);
-    ctx.lineTo(slashX(endY) + half, endY);
-    ctx.lineTo(slashX(endY) - half, endY);
+    ctx.lineTo(SLASH_BOTTOM + half, H);
+    ctx.lineTo(SLASH_BOTTOM - half, H);
     ctx.closePath();
     ctx.clip();
     ctx.fillStyle = color;
@@ -111,21 +102,19 @@ const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, progress: number
     ctx.lineCap = 'butt';
     ctx.beginPath();
     ctx.moveTo(SLASH_TOP, HEADER);
-    ctx.lineTo(slashX(endY), endY);
+    ctx.lineTo(SLASH_BOTTOM, H);
     ctx.stroke();
   }
   ctx.restore();
 };
 
-/** Draws one frame of the line-up. `t` runs 0 → 1 through the intro; 1 is the finished picture. */
-const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, t: number, date: Date) => {
+const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, date: Date) => {
   const { theme } = a;
   ctx.save();
   ctx.drawImage(a.background, 0, 0);
   ctx.textBaseline = 'middle';
 
-  // Header: logo, title and date fade in.
-  ctx.globalAlpha = easeOut(phase(t, 0, 0.18));
+  // Header: logo, title and date.
   ctx.fillStyle = theme.rule[0];
   ctx.fillRect(0, HEADER - 14, W, 8);
   ctx.fillStyle = theme.rule[1];
@@ -144,11 +133,10 @@ const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, t: 
   ctx.font = theme.subFont(34);
   ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
   ctx.fillText([theme.headerDate, dateText].filter(Boolean).join(' · '), W - PAD, 160);
-  ctx.globalAlpha = 1;
 
-  drawSlash(ctx, theme, easeOut(phase(t, 0.02, 0.24)));
+  drawSlash(ctx, theme);
 
-  // Team titles slide in from the outside edges, shrunk if a wide font would run under the VS badge.
+  // Team titles, shrunk if a wide font would run under the VS badge.
   const titleY = HEADER + 95;
   const vsY = titleY + 20;
   const vsX = slashX(vsY);
@@ -160,46 +148,36 @@ const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, t: 
     1
   );
   ctx.font = theme.titleFont(Math.floor(104 * room));
-  const tp = easeOut(phase(t, 0.16, 0.22));
-  ctx.globalAlpha = tp;
   ctx.textAlign = 'left';
   ctx.fillStyle = theme.lights.title;
-  ctx.fillText('LIGHTS', PAD - (1 - tp) * 160, titleY);
+  ctx.fillText('LIGHTS', PAD, titleY);
   ctx.textAlign = 'right';
   ctx.fillStyle = theme.darks.title;
-  ctx.fillText('DARKS', W - PAD + (1 - tp) * 160, titleY);
+  ctx.fillText('DARKS', W - PAD, titleY);
   ctx.letterSpacing = '2px';
   ctx.font = theme.subFont(30);
   ctx.textAlign = 'left';
   ctx.fillStyle = theme.lights.sub;
-  ctx.fillText(`${teams.light.length} PLAYERS`, PAD + 4 - (1 - tp) * 160, titleY + 70);
+  ctx.fillText(`${teams.light.length} PLAYERS`, PAD + 4, titleY + 70);
   ctx.textAlign = 'right';
   ctx.fillStyle = theme.darks.sub;
-  ctx.fillText(`${teams.dark.length} PLAYERS`, W - PAD - 4 + (1 - tp) * 160, titleY + 70);
-  ctx.globalAlpha = 1;
+  ctx.fillText(`${teams.dark.length} PLAYERS`, W - PAD - 4, titleY + 70);
 
-  // VS badge pops onto the slash.
-  const vp = phase(t, 0.34, 0.16);
-  if (vp > 0) {
-    ctx.save();
-    ctx.translate(vsX, vsY);
-    ctx.scale(backOut(vp), backOut(vp));
-    ctx.fillStyle = theme.vs.fill;
-    ctx.beginPath();
-    ctx.arc(0, 0, 56, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.lineWidth = 6;
-    ctx.strokeStyle = theme.vs.ring;
-    ctx.stroke();
-    ctx.fillStyle = theme.vs.text;
-    ctx.textAlign = 'center';
-    ctx.letterSpacing = '1px';
-    ctx.font = theme.titleFont(54);
-    ctx.fillText('VS', 0, 3);
-    ctx.restore();
-  }
+  // VS badge on the slash.
+  ctx.fillStyle = theme.vs.fill;
+  ctx.beginPath();
+  ctx.arc(vsX, vsY, 56, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = theme.vs.ring;
+  ctx.stroke();
+  ctx.fillStyle = theme.vs.text;
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '1px';
+  ctx.font = theme.titleFont(54);
+  ctx.fillText('VS', vsX, vsY + 3);
 
-  // Names, sized so the longer team fits, slide in row by row.
+  // Names, sized so the longer team fits.
   const top = titleY + 140;
   const bottom = H - 60;
   const rows = Math.max(teams.light.length, teams.dark.length, 1);
@@ -232,14 +210,7 @@ const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, t: 
     }
   };
 
-  const rowProgress = (i: number) => easeOut(phase(t, 0.44 + (i / rows) * 0.36, 0.2));
-
   teams.light.forEach((p, i) => {
-    const rp = rowProgress(i);
-    if (rp <= 0) return;
-    ctx.save();
-    ctx.globalAlpha = rp;
-    ctx.translate(-(1 - rp) * 220, 0);
     const y = top + lh * i + lh / 2;
     const edge = Math.min(slashX(y - lh / 2), slashX(y + lh / 2)) - GAP;
     pill(PAD - 18, y, edge - PAD + 18, theme.lights);
@@ -248,15 +219,9 @@ const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, t: 
     ctx.fillStyle = theme.lights.pillText;
     ctx.textAlign = 'left';
     ctx.fillText(fit(ctx, p.name, edge - PAD - 12 - indent), PAD + indent, y + 1);
-    ctx.restore();
   });
 
   teams.dark.forEach((p, i) => {
-    const rp = rowProgress(i);
-    if (rp <= 0) return;
-    ctx.save();
-    ctx.globalAlpha = rp;
-    ctx.translate((1 - rp) * 220, 0);
     const y = top + lh * i + lh / 2;
     const edge = Math.max(slashX(y - lh / 2), slashX(y + lh / 2)) + GAP;
     pill(edge, y, W - PAD + 18 - edge, theme.darks);
@@ -265,78 +230,20 @@ const renderFrame = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, t: 
     ctx.fillStyle = theme.darks.pillText;
     ctx.textAlign = 'right';
     ctx.fillText(fit(ctx, p.name, W - PAD - edge - 12 - indent), W - PAD - indent, y + 1);
-    ctx.restore();
   });
 
-  theme.overlay?.(ctx, t);
+  theme.overlay?.(ctx);
   ctx.restore();
-};
-
-const newCanvas = (w: number, h: number) => {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return c;
 };
 
 /** The finished Lights vs Darks line-up as a WhatsApp-friendly 4:5 PNG. */
 export const drawTeamsGraphic = async (teams: Teams, design: GraphicDesign, date = new Date()): Promise<Blob> => {
   const assets = await prepare(design);
-  const canvas = newCanvas(W, H);
-  renderFrame(canvas.getContext('2d')!, teams, assets, 1, date);
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  drawPicture(canvas.getContext('2d')!, teams, assets, date);
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not render image'))), 'image/png')
   );
-};
-
-const GIF_SCALE = 0.5;
-const GIF_FRAMES = 28;
-const FRAME_MS = 50;
-const HOLD_MS = 4000;
-
-/** The line-up as a looping GIF: the intro plays, then the finished picture holds before it repeats. */
-export const makeTeamsGif = async (teams: Teams, design: GraphicDesign, date = new Date()): Promise<Blob> => {
-  const assets = await prepare(design);
-  const full = newCanvas(W, H);
-  const fctx = full.getContext('2d')!;
-  const gw = Math.round(W * GIF_SCALE);
-  const gh = Math.round(H * GIF_SCALE);
-  const small = newCanvas(gw, gh);
-  const sctx = small.getContext('2d', { willReadFrequently: true })!;
-
-  // Open on the finished picture (WhatsApp shows the first frame as the preview), then replay the intro.
-  const times = [1, ...Array.from({ length: GIF_FRAMES }, (_, i) => i / (GIF_FRAMES - 1))];
-  const frames: Uint8ClampedArray[] = [];
-  for (const [i, t] of times.entries()) {
-    renderFrame(fctx, teams, assets, t, date);
-    sctx.drawImage(full, 0, 0, gw, gh);
-    frames.push(sctx.getImageData(0, 0, gw, gh).data);
-    // Yield now and then so the page stays responsive while frames render.
-    if (i % 6 === 5) await new Promise(r => setTimeout(r));
-  }
-
-  // One shared palette, taken from the finished frame, keeps colours steady between frames. The last slot is
-  // kept free to mark "unchanged" pixels, so each frame after the first only stores what moved.
-  const palette = quantize(frames[0], 255);
-  const unchanged = palette.length;
-  palette.push([0, 0, 0]);
-  const gif = GIFEncoder();
-  let previous: Uint8Array | null = null;
-  frames.forEach((data, i) => {
-    const indexed = applyPalette(data, palette);
-    let pixels = indexed;
-    if (previous) {
-      pixels = indexed.slice();
-      for (let p = 0; p < pixels.length; p++) if (pixels[p] === previous[p]) pixels[p] = unchanged;
-    }
-    gif.writeFrame(pixels, gw, gh, {
-      palette: i === 0 ? palette : undefined,
-      delay: i === 0 ? HOLD_MS : FRAME_MS,
-      repeat: 0,
-      ...(previous ? { transparent: true, transparentIndex: unchanged, dispose: 1 } : {})
-    });
-    previous = indexed;
-  });
-  gif.finish();
-  return new Blob([gif.bytes()], { type: 'image/gif' });
 };
