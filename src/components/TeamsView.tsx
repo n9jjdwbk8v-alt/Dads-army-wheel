@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useRendered } from './useRendered';
+import { copyText, download as downloadFile, shareOrDownload } from '../lib/share';
 import StarBorder from './reactbits/StarBorder';
 import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import {
@@ -36,33 +38,6 @@ const idsKey = (players: Player[]) =>
     .map(p => p.id)
     .sort()
     .join();
-
-type Rendered = { key: string; blob: Blob; url: string };
-
-/** Renders a blob whenever `key` changes (while enabled), keeping an object URL for it alive until replaced. */
-const useRendered = (key: string, enabled: boolean, render: () => Promise<Blob>) => {
-  const [out, setOut] = useState<Rendered | null>(null);
-  const renderRef = useRef(render);
-  const urlRef = useRef('');
-  useEffect(() => {
-    renderRef.current = render;
-  });
-  useEffect(() => () => URL.revokeObjectURL(urlRef.current), []);
-  useEffect(() => {
-    if (!enabled) return;
-    let cancelled = false;
-    renderRef.current().then(blob => {
-      if (cancelled) return;
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = URL.createObjectURL(blob);
-      setOut({ key, blob, url: urlRef.current });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [key, enabled]);
-  return out;
-};
 
 export default function TeamsView({ present, teams, recent, onSplit }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
@@ -119,36 +94,19 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
     stopRef.current = await playTeamsAnimation(canvasRef.current, teams, design, () => setPlayingKey(null));
   };
 
+  const file = () => shareable && new File([shareable.blob], fileName, { type: shareable.blob.type });
   const download = () => {
-    if (!shareable) return;
-    const a = document.createElement('a');
-    a.href = shareable.url;
-    a.download = fileName;
-    a.click();
+    const f = file();
+    if (f) downloadFile(f);
   };
-
-  const shareImage = async () => {
-    if (!shareable) return;
-    const file = new File([shareable.blob], fileName, { type: shareable.blob.type });
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-        return;
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return;
-      }
-    }
-    download();
+  const shareImage = () => {
+    const f = file();
+    if (f) shareOrDownload(f);
   };
-
-  const copyText = async () => {
-    const text = shareText(teams);
-    try {
-      await navigator.clipboard.writeText(text);
+  const copy = async () => {
+    if (await copyText(shareText(teams))) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
-    } catch {
-      prompt('Copy the teams:', text);
     }
   };
 
@@ -225,7 +183,7 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
             <button className="btn btn--ghost" onClick={download} disabled={!shareable}>
               Download {animated ? 'GIF' : 'image'}
             </button>
-            <button className="btn btn--ghost" onClick={copyText}>
+            <button className="btn btn--ghost" onClick={copy}>
               {copied ? 'Copied!' : 'Copy as text'}
             </button>
           </div>

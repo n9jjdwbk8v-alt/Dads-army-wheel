@@ -35,7 +35,8 @@ export const readBackupFile = async (file: File): Promise<Backup> => {
     // A missing or garbled rating falls back to a middling 5 rather than 0, which would mean goalie.
     const rating = Number(raw.skill);
     const skill = Number.isFinite(rating) ? Math.min(10, Math.max(0, Math.round(rating))) : 5;
-    players.push({ id, name, skill, here: raw.here !== false });
+    const position = raw.position === 'F' || raw.position === 'D' || raw.position === 'G' ? raw.position : undefined;
+    players.push({ id, name, skill, here: raw.here !== false, ...(position ? { position } : {}) });
   }
 
   const history = Array.isArray(d.history)

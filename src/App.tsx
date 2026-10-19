@@ -6,17 +6,20 @@ import Backdrop from './components/Backdrop';
 import Roster from './components/Roster';
 import Backup from './components/Backup';
 import TeamsView from './components/TeamsView';
+import GameDay from './components/GameDay';
+import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
 import { NO_TEAMS, recordGame, todayKey, type GameRecord, type Player, type Teams } from './lib/teams';
 import type { Backup as BackupData } from './lib/backup';
 import { usePersistentState } from './lib/storage';
 import './App.css';
 
-type Tab = 'roster' | 'teams';
+type Tab = 'roster' | 'teams' | 'gameday';
 
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);
   const [teams, setTeams] = usePersistentState<Teams>('dads-army:teams', NO_TEAMS);
   const [history, setHistory] = usePersistentState<GameRecord[]>('dads-army:history', []);
+  const [gameDay, setGameDay] = usePersistentState<GameDayState>('dads-army:gameday', NEW_GAME_DAY);
   const [tab, setTab] = useState<Tab>(() => (teams.light.length ? 'teams' : 'roster'));
 
   const present = players.filter(p => p.here);
@@ -49,7 +52,8 @@ export default function App() {
           <RubberSegment
             items={[
               { value: 'roster', label: `Roster (${present.length}/${players.length})` },
-              { value: 'teams', label: 'Teams' }
+              { value: 'teams', label: 'Teams' },
+              { value: 'gameday', label: 'Game day' }
             ]}
             value={tab}
             onChange={v => setTab(v as Tab)}
@@ -61,12 +65,14 @@ export default function App() {
           />
         </nav>
 
-        {tab === 'roster' ? (
+        {tab === 'roster' && (
           <Roster players={players} setPlayers={setPlayers}>
             <Backup players={players} history={history} onRestore={restore} />
           </Roster>
-        ) : (
-          <TeamsView present={present} teams={teams} recent={recent} onSplit={split} />
+        )}
+        {tab === 'teams' && <TeamsView present={present} teams={teams} recent={recent} onSplit={split} />}
+        {tab === 'gameday' && (
+          <GameDay players={players} setPlayers={setPlayers} gameDay={gameDay} setGameDay={setGameDay} />
         )}
       </main>
 

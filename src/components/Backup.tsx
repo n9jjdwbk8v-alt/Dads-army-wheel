@@ -1,5 +1,6 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { makeBackupFile, readBackupFile, type Backup as BackupData } from '../lib/backup';
+import { shareOrDownload } from '../lib/share';
 import type { GameRecord, Player } from '../lib/teams';
 
 type BackupProps = {
@@ -13,21 +14,7 @@ export default function Backup({ players, history, onRestore }: BackupProps) {
   const [message, setMessage] = useState('');
 
   const save = async () => {
-    const file = makeBackupFile(players, history);
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file] });
-        return;
-      } catch (e) {
-        if ((e as Error).name === 'AbortError') return;
-      }
-    }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.click();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    await shareOrDownload(makeBackupFile(players, history));
   };
 
   const restore = async (e: ChangeEvent<HTMLInputElement>) => {

@@ -1,8 +1,13 @@
+/** Game day position: forward, defence or goalie. */
+export type Position = 'F' | 'D' | 'G';
+
 export type Player = {
   id: string;
   name: string;
   skill: number;
   here: boolean;
+  /** Set on the Game day squad sheet; until then goalies (skill 0) count as G and everyone else as F. */
+  position?: Position;
 };
 
 export type Team = 'light' | 'dark';

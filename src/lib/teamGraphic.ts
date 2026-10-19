@@ -1,7 +1,7 @@
 import { GIFEncoder, applyPalette, quantize } from 'gifenc';
 import { isGoalie, type Teams } from './teams';
+import { fit, loadFonts, loadLogo, newCanvas } from './canvasKit';
 import {
-  FONT_LOADS,
   H,
   HEADER,
   SLASH_TOP,
@@ -28,31 +28,6 @@ const neonLit = (t: number, start: number, seed: number) => {
   if (t >= start + 0.1) return true;
   if (t < start) return false;
   return (Math.floor((t - start) * 120) * 7 + seed * 5) % 4 < 2;
-};
-
-const fit = (ctx: CanvasRenderingContext2D, text: string, max: number) => {
-  if (ctx.measureText(text).width <= max) return text;
-  let t = text;
-  while (t.length > 1 && ctx.measureText(`${t}…`).width > max) t = t.slice(0, -1);
-  return `${t}…`;
-};
-
-let logoPromise: Promise<HTMLImageElement | null> | null = null;
-const loadLogo = () =>
-  (logoPromise ??= new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () => resolve(null);
-    img.src = new URL('logo.png', document.baseURI).href;
-  }));
-
-const loadFonts = () => Promise.all(FONT_LOADS.map(f => document.fonts.load(f))).catch(() => undefined);
-
-const newCanvas = (w: number, h: number) => {
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  return c;
 };
 
 /** The logo recoloured to a single tint (used for night vision). */
