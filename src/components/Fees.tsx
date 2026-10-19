@@ -195,13 +195,6 @@ export default function Fees({ players, fees, setFees }: FeesProps) {
           <span>Fee per player</span>
           <MoneyInput value={fees.amount} onChange={amount => setFees(f => ({ ...f, amount }))} />
         </label>
-        <SpringCheck
-          {...CHECK}
-          className=""
-          label="Goalies skate free"
-          checked={fees.goaliesFree}
-          onChange={goaliesFree => setFees(f => ({ ...f, goaliesFree }))}
-        />
       </div>
     </section>
   );

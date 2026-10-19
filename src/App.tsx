@@ -9,20 +9,20 @@ import TeamsView from './components/TeamsView';
 import GameDay from './components/GameDay';
 import Fees from './components/Fees';
 import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
-import { NEW_FEES, type FeesState } from './lib/fees';
+import { NEW_FEES, readFees, type FeesState } from './lib/fees';
 import { NO_TEAMS, recordGame, todayKey, type GameRecord, type Player, type Teams } from './lib/teams';
 import type { Backup as BackupData } from './lib/backup';
 import { usePersistentState } from './lib/storage';
 import './App.css';
 
-type Tab = 'roster' | 'teams' | 'gameday' | 'fees';
+type Tab = 'roster' | 'teams' | 'fees' | 'gameday';
 
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);
   const [teams, setTeams] = usePersistentState<Teams>('dads-army:teams', NO_TEAMS);
   const [history, setHistory] = usePersistentState<GameRecord[]>('dads-army:history', []);
   const [gameDay, setGameDay] = usePersistentState<GameDayState>('dads-army:gameday', NEW_GAME_DAY);
-  const [fees, setFees] = usePersistentState<FeesState>('dads-army:fees', NEW_FEES);
+  const [fees, setFees] = usePersistentState<FeesState>('dads-army:fees', NEW_FEES, readFees);
   const [tab, setTab] = useState<Tab>(() => (teams.light.length ? 'teams' : 'roster'));
 
   const present = players.filter(p => p.here);
@@ -57,8 +57,8 @@ export default function App() {
             items={[
               { value: 'roster', label: `Roster (${present.length}/${players.length})` },
               { value: 'teams', label: 'Teams' },
-              { value: 'gameday', label: 'Game day' },
-              { value: 'fees', label: 'Fees' }
+              { value: 'fees', label: 'Fees' },
+              { value: 'gameday', label: 'Game day' }
             ]}
             value={tab}
             onChange={v => setTab(v as Tab)}

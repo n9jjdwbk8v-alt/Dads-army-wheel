@@ -1,4 +1,4 @@
-import { isGoalie, type Player } from './teams';
+import type { Player } from './teams';
 
 /** One player owing for a night. The name is kept so a debt still reads right if they leave the roster. */
 export type FeeDue = { id: string; name: string };
@@ -9,12 +9,12 @@ export type FeeNight = { id: string; date: string; amount: number; due: FeeDue[]
 export type FeesState = {
   /** The fee a new night starts with. */
   amount: number;
-  /** Leave goalies off new nights. */
-  goaliesFree: boolean;
   nights: FeeNight[];
+  /** 2 once the default fee went from £10 to £15. */
+  v?: 2;
 };
 
-export const NEW_FEES: FeesState = { amount: 10, goaliesFree: true, nights: [] };
+export const NEW_FEES: FeesState = { amount: 15, nights: [], v: 2 };
 
 /** Pounds, with pence only when there are some: £10, £7.50. */
 export const money = (n: number) => `£${Number.isInteger(n) ? n : n.toFixed(2)}`;
@@ -31,13 +31,13 @@ export const nightLabel = (date: string) => {
     : d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
 };
 
-/** A new night for the players ticked as here on the Roster, leaving out goalies when they skate free. */
+/** A new night for everyone ticked as here on the Roster. */
 export const startNight = (fees: FeesState, players: Player[], date = localDate()): FeeNight => ({
   id: crypto.randomUUID(),
   date,
   amount: fees.amount,
   due: players
-    .filter(p => p.here && !(fees.goaliesFree && isGoalie(p)))
+    .filter(p => p.here)
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(p => ({ id: p.id, name: p.name })),
   paid: []
@@ -83,7 +83,7 @@ export const owedText = (list: Debt[]) => {
   ].join('\n');
 };
 
-/** Keeps only well-formed nights from a backup file. */
+/** Keeps only well-formed nights from a backup file or this phone's storage. */
 export const readFees = (raw: unknown): FeesState | undefined => {
   if (!raw || typeof raw !== 'object') return undefined;
   const r = raw as Record<string, unknown>;
@@ -101,9 +101,7 @@ export const readFees = (raw: unknown): FeesState | undefined => {
           paid: Array.isArray(n.paid) ? (n.paid as unknown[]).filter((x): x is string => typeof x === 'string') : []
         }))
     : [];
-  return {
-    amount: Number.isFinite(amount) && amount >= 0 ? amount : NEW_FEES.amount,
-    goaliesFree: r.goaliesFree !== false,
-    nights
-  };
+  // Fees saved before the default went up still hold the old £10 default; move those to £15.
+  const kept = Number.isFinite(amount) && amount >= 0 ? amount : NEW_FEES.amount;
+  return { amount: r.v !== 2 && kept === 10 ? NEW_FEES.amount : kept, nights, v: 2 };
 };
