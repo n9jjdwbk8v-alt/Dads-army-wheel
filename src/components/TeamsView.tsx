@@ -3,6 +3,7 @@ import StarBorder from './reactbits/StarBorder';
 import { isGoalie, splitTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
 import {
   drawTeamsGraphic,
+  drawTeamsThumbnail,
   makeTeamsGif,
   playTeamsAnimation,
   GRAPHIC_DESIGNS,
@@ -72,13 +73,31 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
   // Teams go stale if someone was ticked in or out after the split.
   const stale = hasTeams && idsKey(present) !== idsKey([...teams.light, ...teams.dark]);
   const ready = hasTeams && !stale;
-  const key = `${idsKey(teams.light)}|${idsKey(teams.dark)}|${design}`;
-
+  const teamsKey = `${idsKey(teams.light)}|${idsKey(teams.dark)}`;
+  const key = `${teamsKey}|${design}`;
   const animated = GRAPHIC_DESIGNS.some(d => d.value === design && d.animated);
-  const stepDesign = (by: number) => {
-    const i = GRAPHIC_DESIGNS.findIndex(d => d.value === design);
-    setDesign(GRAPHIC_DESIGNS[(i + by + GRAPHIC_DESIGNS.length) % GRAPHIC_DESIGNS.length].value);
-  };
+
+  // Mini previews of every style with tonight's teams, filled in one at a time.
+  const [thumbs, setThumbs] = useState<{ key: string; urls: Partial<Record<GraphicDesign, string>> }>({
+    key: '',
+    urls: {}
+  });
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    (async () => {
+      const urls: Partial<Record<GraphicDesign, string>> = {};
+      for (const d of GRAPHIC_DESIGNS) {
+        urls[d.value] = await drawTeamsThumbnail(teams, d.value);
+        if (cancelled) return;
+        setThumbs({ key: teamsKey, urls: { ...urls } });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [teams, teamsKey, ready]);
+  const thumbUrls = thumbs.key === teamsKey ? thumbs.urls : {};
   // The preview is always the finished still; an animated style also builds its GIF for sending.
   const picture = useRendered(key, ready, () => drawTeamsGraphic(teams, design));
   const gif = useRendered(key, ready && animated, () => makeTeamsGif(teams, design));
@@ -163,29 +182,6 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
 
       {ready && picture && (
         <div className="panel graphic">
-          <label className="graphic__label" htmlFor="picture-style">
-            Picture style
-          </label>
-          <div className="style-picker">
-            <button className="style-picker__step" onClick={() => stepDesign(-1)} aria-label="Previous style">
-              ‹
-            </button>
-            <select
-              id="picture-style"
-              className="style-picker__select"
-              value={design}
-              onChange={e => setDesign(e.target.value as GraphicDesign)}
-            >
-              {GRAPHIC_DESIGNS.map(d => (
-                <option key={d.value} value={d.value}>
-                  {d.animated ? `${d.label} (animated GIF)` : d.label}
-                </option>
-              ))}
-            </select>
-            <button className="style-picker__step" onClick={() => stepDesign(1)} aria-label="Next style">
-              ›
-            </button>
-          </div>
           <div className="graphic__frame">
             <img
               src={picture.url}
@@ -202,6 +198,24 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
               </button>
             )}
             {animated && <span className="graphic__badge">GIF</span>}
+          </div>
+          <p className="graphic__label">Choose a style</p>
+          <div className="thumbs" role="radiogroup" aria-label="Picture style">
+            {GRAPHIC_DESIGNS.map(d => (
+              <button
+                key={d.value}
+                role="radio"
+                aria-checked={d.value === design}
+                className={d.value === design ? 'thumb thumb--on' : 'thumb'}
+                onClick={() => setDesign(d.value)}
+              >
+                <span className="thumb__img">
+                  {thumbUrls[d.value] && <img src={thumbUrls[d.value]} alt="" />}
+                  {d.animated && <span className="thumb__gif">GIF</span>}
+                </span>
+                <span className="thumb__label">{d.label}</span>
+              </button>
+            ))}
           </div>
           <button className="btn btn--primary btn--whatsapp" onClick={shareImage} disabled={!shareable}>
             {shareable || !animated ? 'Send to WhatsApp' : 'Making GIF…'}

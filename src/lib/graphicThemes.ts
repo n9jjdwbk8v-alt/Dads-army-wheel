@@ -52,7 +52,8 @@ export const FONT_LOADS = [
   `60px ${COMIC}`,
   `700 40px ${ENGRAVED}`,
   `900 60px ${ENGRAVED}`,
-  `40px ${NEON}`
+  `40px ${NEON}`,
+  `italic 800 60px ${DISPLAY}`
 ];
 
 type Side = {
@@ -95,8 +96,11 @@ export type Theme = {
   /** Colour of an unlit neon tube while the animation flickers parts on. */
   unlit?: string;
   tintLogo?: string;
-  /** Shared as a looping GIF in which each part flickers on like a neon sign. */
-  animated?: boolean;
+  /**
+   * Shared as a looping GIF: 'neon' flickers each part on like a sign; 'slide' wipes the slash down, slides the
+   * titles and names in and pops the VS badge.
+   */
+  animated?: 'neon' | 'slide';
 };
 
 /** A tile of fine random grain, used to give flat colour some texture. */
@@ -662,7 +666,7 @@ const honourBoard: Theme = {
 
 const neon: Theme = {
   label: 'Neon',
-  animated: true,
+  animated: 'neon',
   background: ctx => {
     ctx.fillStyle = '#120a09';
     ctx.fillRect(0, 0, W, H);
@@ -710,6 +714,174 @@ const neon: Theme = {
   unlit: 'rgba(210, 200, 200, 0.14)'
 };
 
+// ---------- Arena: spotlights over a packed rink, sliding in as a GIF ----------
+
+const arena: Theme = {
+  label: 'Arena',
+  animated: 'slide',
+  background: ctx => {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#05080a');
+    g.addColorStop(0.7, '#0a1a12');
+    g.addColorStop(1, '#13301f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const glow = (x: number, y: number, r: number, color: string) => {
+      const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, color);
+      rg.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(0, 0, W, H);
+    };
+    glow(W * 0.2, H * 0.55, 620, 'rgba(200, 225, 255, 0.16)');
+    glow(W * 0.82, H * 0.6, 640, 'rgba(93, 255, 138, 0.18)');
+    // Crowd and camera flashes as soft out-of-focus lights along the bottom.
+    const rand = mulberry32(99);
+    for (let i = 0; i < 140; i++) {
+      const x = rand() * W;
+      const y = H - 330 + rand() * 330;
+      const r = 4 + rand() * 14;
+      const warm = rand() < 0.5;
+      const dot = ctx.createRadialGradient(x, y, 0, x, y, r);
+      dot.addColorStop(0, warm ? 'rgba(255, 220, 160, 0.35)' : 'rgba(180, 255, 200, 0.3)');
+      dot.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = dot;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    // Ice sheen at the very bottom.
+    const ice = ctx.createLinearGradient(0, H - 120, 0, H);
+    ice.addColorStop(0, 'rgba(220, 240, 255, 0)');
+    ice.addColorStop(1, 'rgba(220, 240, 255, 0.12)');
+    ctx.fillStyle = ice;
+    ctx.fillRect(0, H - 120, W, 120);
+    fillPattern(ctx, grain(20, 101));
+    headerBand(ctx, 'rgba(0, 0, 0, 0.6)');
+  },
+  // Two spotlights sweep from the rafters, settling as the line-up lands.
+  overlay: (ctx, t) => {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const sway = Math.sin(t * Math.PI * 2.5) * (1 - t) * 0.5;
+    for (const [x, base, tint] of [
+      [W * 0.12, 0.42, '210, 230, 255'],
+      [W * 0.88, -0.42, '150, 255, 180']
+    ] as const) {
+      const angle = base + (x < W / 2 ? sway : -sway);
+      ctx.save();
+      ctx.translate(x, HEADER - 20);
+      ctx.rotate(-angle);
+      const beam = ctx.createLinearGradient(0, 0, 0, H);
+      beam.addColorStop(0, `rgba(${tint}, 0.22)`);
+      beam.addColorStop(1, `rgba(${tint}, 0)`);
+      ctx.fillStyle = beam;
+      ctx.beginPath();
+      ctx.moveTo(-14, 0);
+      ctx.lineTo(14, 0);
+      ctx.lineTo(230, H);
+      ctx.lineTo(-230, H);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  },
+  headerTitle: 'LIGHTS VS DARKS',
+  headerDate: 'GAME NIGHT',
+  headerFont: px => `italic 800 ${Math.round(px * 1.1)}px ${DISPLAY}`,
+  rule: ['#ffffff', '#5dff8a'],
+  lights: { title: '#ffffff', sub: '#c9dcff', pill: 'rgba(255, 255, 255, 0.1)', pillText: '#ffffff', pillStroke: 'rgba(255, 255, 255, 0.4)' },
+  darks: { title: '#5dff8a', sub: '#a8ffc0', pill: 'rgba(93, 255, 138, 0.1)', pillText: '#d9ffe4', pillStroke: 'rgba(93, 255, 138, 0.45)' },
+  slash: { kind: 'glow', color: '#ffffff', width: 10 },
+  vs: { fill: '#ffffff', ring: '#5dff8a', text: '#0b1a10' },
+  goalie: { fill: '#5dff8a', text: '#0b1a10' },
+  titleFont: px => `italic 800 ${Math.round(px * 1.05)}px ${DISPLAY}`,
+  subFont: px => `600 ${px}px ${DISPLAY}`,
+  nameFont: px => `italic 800 ${Math.round(px * 1.1)}px ${DISPLAY}`,
+  pillRadius: 6
+};
+
+// ---------- Broadcast: a TV sports graphic, sliding in as a GIF ----------
+
+const TICKER = 'DADS ARMY ICE HOCKEY  ·  LIGHTS VS DARKS  ·  TEAMS CONFIRMED  ·  FACE-OFF SOON  ·  ';
+
+const broadcast: Theme = {
+  label: 'Broadcast',
+  animated: 'slide',
+  background: ctx => {
+    ctx.fillStyle = '#e9eef0';
+    ctx.fillRect(0, 0, W, H);
+    // Fine diagonal pinstripes, like studio graphics.
+    ctx.strokeStyle = 'rgba(15, 81, 50, 0.05)';
+    ctx.lineWidth = 2;
+    for (let x = -H; x < W; x += 18) {
+      ctx.beginPath();
+      ctx.moveTo(x, H);
+      ctx.lineTo(x + H, 0);
+      ctx.stroke();
+    }
+    clipped(ctx, darksShape, () => {
+      const g = ctx.createLinearGradient(W, HEADER, SLASH_BOTTOM, H);
+      g.addColorStop(0, '#16703f');
+      g.addColorStop(1, '#0a3a22');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      for (let x = -H; x < W; x += 18) {
+        ctx.beginPath();
+        ctx.moveTo(x, H);
+        ctx.lineTo(x + H, 0);
+        ctx.stroke();
+      }
+    });
+    headerBand(ctx, '#0b0f0c');
+  },
+  // A blinking LIVE bug and a news ticker that scrolls while the graphic comes in.
+  overlay: (ctx, t) => {
+    const y = H - 54;
+    ctx.fillStyle = '#0b0f0c';
+    ctx.fillRect(0, y, W, 54);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(150, y, W - 150, 54);
+    ctx.clip();
+    ctx.font = `700 26px ${DISPLAY}`;
+    ctx.letterSpacing = '3px';
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffffff';
+    const run = ctx.measureText(TICKER).width;
+    const offset = (t * 700) % run;
+    for (let x = 170 - offset; x < W; x += run) ctx.fillText(TICKER, x, y + 28);
+    ctx.restore();
+    ctx.fillStyle = '#d7263d';
+    ctx.fillRect(0, y, 150, 54);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `italic 800 30px ${DISPLAY}`;
+    ctx.letterSpacing = '2px';
+    ctx.textAlign = 'left';
+    ctx.fillText('LIVE', 54, y + 28);
+    if (t === 1 || Math.floor(t * 8) % 2 === 0) {
+      ctx.beginPath();
+      ctx.arc(32, y + 27, 9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  headerTitle: 'LIGHTS VS DARKS',
+  headerDate: 'TEAMS CONFIRMED',
+  headerFont: px => `italic 800 ${Math.round(px * 1.1)}px ${DISPLAY}`,
+  headerSub: '#ffcf00',
+  rule: ['#ffcf00', '#0b0f0c'],
+  lights: { title: '#0b1a10', sub: '#4d6358', pill: '#ffffff', pillText: '#0b1a10', pillStroke: 'rgba(11, 26, 16, 0.12)' },
+  darks: { title: '#ffffff', sub: '#bfe8cf', pill: '#0b0f0c', pillText: '#ffffff' },
+  slash: { kind: 'line', color: '#ffcf00', width: 16 },
+  vs: { fill: '#ffcf00', ring: '#0b0f0c', text: '#0b0f0c' },
+  goalie: { fill: '#ffcf00', text: '#0b0f0c' },
+  titleFont: px => `italic 800 ${Math.round(px * 1.05)}px ${DISPLAY}`,
+  subFont: px => `700 ${px}px ${DISPLAY}`,
+  nameFont: px => `italic 800 ${Math.round(px * 1.08)}px ${DISPLAY}`,
+  pillRadius: 0
+};
+
 export type GraphicDesign =
   | 'rink'
   | 'matchday'
@@ -718,7 +890,9 @@ export type GraphicDesign =
   | 'chalkboard'
   | 'comic'
   | 'honour'
-  | 'neon';
+  | 'neon'
+  | 'arena'
+  | 'broadcast';
 
 export const THEMES: Record<GraphicDesign, Theme> = {
   rink,
@@ -728,7 +902,9 @@ export const THEMES: Record<GraphicDesign, Theme> = {
   chalkboard,
   comic,
   honour: honourBoard,
-  neon
+  neon,
+  arena,
+  broadcast
 };
 
 export const GRAPHIC_DESIGNS = (Object.keys(THEMES) as GraphicDesign[]).map(value => ({

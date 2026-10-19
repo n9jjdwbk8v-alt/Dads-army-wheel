@@ -4,7 +4,6 @@ import {
   FONT_LOADS,
   H,
   HEADER,
-  SLASH_BOTTOM,
   SLASH_TOP,
   THEMES,
   W,
@@ -17,6 +16,12 @@ export { GRAPHIC_DESIGNS, type GraphicDesign } from './graphicThemes';
 
 const PAD = 70;
 const GAP = 44;
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+const easeOut = (v: number) => 1 - (1 - v) ** 3;
+const backOut = (v: number) => 1 + 2.4 * (v - 1) ** 3 + 1.4 * (v - 1) ** 2;
+/** Progress of a step that runs from `start` for `length` of the animation. */
+const phase = (t: number, start: number, length: number) => clamp01((t - start) / length);
 
 /** Whether a neon part is lit at time `t`: dark before `start`, flickering briefly, then steady. */
 const neonLit = (t: number, start: number, seed: number) => {
@@ -65,7 +70,18 @@ const tinted = (logo: HTMLImageElement, color: string) => {
 
 type Assets = { theme: Theme; background: HTMLCanvasElement; logo: CanvasImageSource | null; logoAspect: number };
 
-const prepare = async (design: GraphicDesign): Promise<Assets> => {
+// Backgrounds take a moment to paint, so each style's is made once and reused.
+const prepared = new Map<GraphicDesign, Promise<Assets>>();
+const prepare = (design: GraphicDesign) => {
+  let assets = prepared.get(design);
+  if (!assets) {
+    assets = makeAssets(design);
+    prepared.set(design, assets);
+  }
+  return assets;
+};
+
+const makeAssets = async (design: GraphicDesign): Promise<Assets> => {
   const [logo] = await Promise.all([loadLogo(), loadFonts()]);
   const theme = THEMES[design];
   const background = newCanvas(W, H);
@@ -89,7 +105,10 @@ const lightUp = (ctx: CanvasRenderingContext2D, theme: Theme, color: string, on:
   return on ? color : (theme.unlit ?? color);
 };
 
-const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, on: boolean) => {
+/** Draws the slash from the header down to `progress` of the way (1 = all of it). */
+const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, on: boolean, progress: number) => {
+  if (progress <= 0) return;
+  const endY = HEADER + (H - HEADER) * progress;
   const { kind, width } = theme.slash;
   const color = on ? theme.slash.color : (theme.unlit ?? theme.slash.color);
   ctx.save();
@@ -101,7 +120,7 @@ const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, on: boolean) => 
       ctx.lineWidth = width * w;
       ctx.beginPath();
       ctx.moveTo(SLASH_TOP + dx, HEADER);
-      ctx.lineTo(SLASH_BOTTOM + dx, H);
+      ctx.lineTo(slashX(endY) + dx, endY);
       ctx.stroke();
     }
   } else {
@@ -113,14 +132,18 @@ const drawSlash = (ctx: CanvasRenderingContext2D, theme: Theme, on: boolean) => 
     ctx.lineCap = 'butt';
     ctx.beginPath();
     ctx.moveTo(SLASH_TOP, HEADER);
-    ctx.lineTo(SLASH_BOTTOM, H);
+    ctx.lineTo(slashX(endY), endY);
     ctx.stroke();
   }
   ctx.restore();
 };
 
-const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, on: boolean) => {
+/** Draws the VS badge centred on (x, y), scaled by `scale` so it can pop in. */
+const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: number, on: boolean, scale: number) => {
+  if (scale <= 0) return;
   ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
   ctx.beginPath();
   if (theme.vs.shape === 'burst') {
     // A comic-book starburst.
@@ -128,12 +151,12 @@ const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: numbe
     for (let i = 0; i <= spikes * 2; i++) {
       const r = i % 2 ? 58 : 84;
       const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
-      if (i === 0) ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
-      else ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
     }
     ctx.closePath();
   } else {
-    ctx.arc(x, y, 56, 0, Math.PI * 2);
+    ctx.arc(0, 0, 56, 0, Math.PI * 2);
   }
   ctx.fillStyle = theme.vs.fill;
   ctx.fill();
@@ -145,23 +168,25 @@ const drawVs = (ctx: CanvasRenderingContext2D, theme: Theme, x: number, y: numbe
   ctx.textAlign = 'center';
   ctx.letterSpacing = '1px';
   ctx.font = theme.titleFont(54);
-  ctx.fillText('VS', x, y + 3);
+  ctx.fillText('VS', 0, 3);
   ctx.restore();
 };
 
 /**
- * Draws the line-up. On an animated (neon) design, `t` runs 0 → 1 as each part flickers on in turn;
- * 1 is the finished picture.
+ * Draws the line-up. On an animated design `t` runs 0 → 1 through the animation (each part flickering on for
+ * 'neon', or sliding in for 'slide'); 1 is the finished picture.
  */
 const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, date: Date, t: number) => {
   const { theme } = a;
-  const lit = (start: number, seed: number) => !theme.animated || neonLit(t, start, seed);
+  const lit = (start: number, seed: number) => theme.animated !== 'neon' || neonLit(t, start, seed);
+  const slide = (start: number, length: number) => (theme.animated === 'slide' ? easeOut(phase(t, start, length)) : 1);
   ctx.save();
   ctx.drawImage(a.background, 0, 0);
   ctx.textBaseline = 'middle';
 
   // Header: logo, title and date.
   const headerOn = lit(0.04, 1);
+  ctx.globalAlpha = slide(0, 0.16);
   ctx.fillStyle = theme.rule[0];
   ctx.fillRect(0, HEADER - 14, W, 8);
   ctx.fillStyle = theme.rule[1];
@@ -187,8 +212,9 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
   ctx.fillStyle = lightUp(ctx, theme, theme.headerSub ?? 'rgba(255, 255, 255, 0.7)', headerOn);
   ctx.fillText([theme.headerDate, dateText].filter(Boolean).join(' · '), W - PAD, 160);
   ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
 
-  drawSlash(ctx, theme, lit(0.14, 2));
+  drawSlash(ctx, theme, lit(0.14, 2), slide(0.02, 0.24));
 
   // Team titles, shrunk if a wide font would run under the VS badge.
   const titleY = HEADER + 95;
@@ -203,6 +229,10 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     1
   );
   ctx.font = theme.titleFont(Math.floor(104 * room));
+  // Titles slide in from the outside edges on a 'slide' animation.
+  const tp = slide(0.16, 0.22);
+  const inset = (1 - tp) * 160;
+  ctx.globalAlpha = tp;
   const title = (text: string, x: number, align: CanvasTextAlign, color: string, on: boolean) => {
     ctx.textAlign = align;
     if (theme.titleStroke) {
@@ -217,19 +247,22 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
   };
   const lightsTitleOn = lit(0.24, 3);
   const darksTitleOn = lit(0.3, 4);
-  title('LIGHTS', PAD, 'left', theme.lights.title, lightsTitleOn);
-  title('DARKS', W - PAD, 'right', theme.darks.title, darksTitleOn);
+  title('LIGHTS', PAD - inset, 'left', theme.lights.title, lightsTitleOn);
+  title('DARKS', W - PAD + inset, 'right', theme.darks.title, darksTitleOn);
   ctx.letterSpacing = '2px';
   ctx.font = theme.subFont(30);
   ctx.textAlign = 'left';
   ctx.fillStyle = lightUp(ctx, theme, theme.lights.sub, lightsTitleOn);
-  ctx.fillText(`${teams.light.length} PLAYERS`, PAD + 4, titleY + 70);
+  ctx.fillText(`${teams.light.length} PLAYERS`, PAD + 4 - inset, titleY + 70);
   ctx.textAlign = 'right';
   ctx.fillStyle = lightUp(ctx, theme, theme.darks.sub, darksTitleOn);
-  ctx.fillText(`${teams.dark.length} PLAYERS`, W - PAD - 4, titleY + 70);
+  ctx.fillText(`${teams.dark.length} PLAYERS`, W - PAD - 4 + inset, titleY + 70);
   ctx.shadowBlur = 0;
+  ctx.globalAlpha = 1;
 
-  drawVs(ctx, theme, vsX, vsY, lit(0.38, 5));
+  // The VS badge pops onto the slash on a 'slide' animation.
+  const vsPop = theme.animated === 'slide' ? backOut(phase(t, 0.34, 0.16)) : 1;
+  drawVs(ctx, theme, vsX, vsY, lit(0.38, 5), vsPop);
 
   // Names, sized so the longer team fits.
   const top = titleY + 140;
@@ -265,8 +298,16 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     }
   };
 
+  // On a 'slide' animation the names slide in row by row.
+  const rowIn = (i: number) => slide(0.44 + (i / rows) * 0.36, 0.2);
+
   teams.light.forEach((p, i) => {
     const on = lit(0.44 + (i / rows) * 0.4, 10 + i);
+    const rp = rowIn(i);
+    if (rp <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = rp;
+    ctx.translate(-(1 - rp) * 220, 0);
     const y = top + lh * i + lh / 2;
     const edge = Math.min(slashX(y - lh / 2), slashX(y + lh / 2)) - GAP;
     pill(PAD - 18, y, edge - PAD + 18, theme.lights);
@@ -275,11 +316,16 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     ctx.fillStyle = lightUp(ctx, theme, theme.lights.pillText, on);
     ctx.textAlign = 'left';
     ctx.fillText(fit(ctx, p.name, edge - PAD - 12 - indent), PAD + indent, y + 1);
-    ctx.shadowBlur = 0;
+    ctx.restore();
   });
 
   teams.dark.forEach((p, i) => {
     const on = lit(0.47 + (i / rows) * 0.4, 30 + i);
+    const rp = rowIn(i);
+    if (rp <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = rp;
+    ctx.translate((1 - rp) * 220, 0);
     const y = top + lh * i + lh / 2;
     const edge = Math.max(slashX(y - lh / 2), slashX(y + lh / 2)) + GAP;
     pill(edge, y, W - PAD + 18 - edge, theme.darks);
@@ -288,7 +334,7 @@ const drawPicture = (ctx: CanvasRenderingContext2D, teams: Teams, a: Assets, dat
     ctx.fillStyle = lightUp(ctx, theme, theme.darks.pillText, on);
     ctx.textAlign = 'right';
     ctx.fillText(fit(ctx, p.name, W - PAD - edge - 12 - indent), W - PAD - indent, y + 1);
-    ctx.shadowBlur = 0;
+    ctx.restore();
   });
 
   theme.overlay?.(ctx, t);
@@ -303,6 +349,17 @@ export const drawTeamsGraphic = async (teams: Teams, design: GraphicDesign, date
   return new Promise((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Could not render image'))), 'image/png')
   );
+};
+
+/** A small finished preview of a design, as a data URL. */
+export const drawTeamsThumbnail = async (teams: Teams, design: GraphicDesign, width = 200): Promise<string> => {
+  const assets = await prepare(design);
+  const scale = width / W;
+  const canvas = newCanvas(width, Math.round(H * scale));
+  const ctx = canvas.getContext('2d')!;
+  ctx.scale(scale, scale);
+  drawPicture(ctx, teams, assets, new Date(), 1);
+  return canvas.toDataURL('image/jpeg', 0.82);
 };
 
 const GIF_SCALE = 2 / 3;
