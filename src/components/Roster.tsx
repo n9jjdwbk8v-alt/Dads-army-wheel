@@ -56,9 +56,9 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
           max={10}
           step={1}
           onChange={setSkill}
-          accent="#1f8a4c"
+          accent="#c8e66b"
           suffix=""
-          chipColor="#e3f3e9"
+          chipColor="rgba(255, 255, 255, 0.06)"
         />
         <button className="btn btn--primary" type="submit" disabled={!name.trim()}>
           Add
@@ -106,9 +106,9 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
                 onChange={here => update(p.id, { here })}
                 strike="none"
                 doneOpacity={1}
-                color="#0f5132"
-                fillColor="#1f8a4c"
-                checkColor="#ffffff"
+                color="#e6f0d6"
+                fillColor="#9cc23f"
+                checkColor="#12180d"
                 boxSize={22}
                 fontSize={17}
                 className="roster__check"
@@ -121,8 +121,8 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
                 step={1}
                 size="sm"
                 onChange={v => update(p.id, { skill: v })}
-                accent="#1f8a4c"
-                chipColor="#ffffff"
+                accent="#c8e66b"
+                chipColor="rgba(255, 255, 255, 0.06)"
                 suffix=""
               />
               <button

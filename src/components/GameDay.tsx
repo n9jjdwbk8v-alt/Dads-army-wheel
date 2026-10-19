@@ -209,9 +209,9 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
                     onChange={on => toggle(p.id, on)}
                     strike="none"
                     doneOpacity={1}
-                    color="#0f5132"
-                    fillColor="#1f8a4c"
-                    checkColor="#ffffff"
+                    color="#e6f0d6"
+                    fillColor="#9cc23f"
+                    checkColor="#12180d"
                     boxSize={22}
                     fontSize={17}
                     className="roster__check"

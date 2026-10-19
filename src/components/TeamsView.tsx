@@ -121,10 +121,9 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
         </p>
         <div className="split__actions">
           <StarBorder
-            theme="light"
-            color="#a3e635"
-            backgroundColor="#0f5132"
-            textColor="#ffffff"
+            color="#ffffff"
+            backgroundColor="#c8e66b"
+            textColor="#12180d"
             className="cta"
             disabled={!enough}
             onClick={() => onSplit(splitTeams(present, recent))}
