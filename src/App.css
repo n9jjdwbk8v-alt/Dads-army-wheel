@@ -35,6 +35,9 @@
 /* ---------- Layout ---------- */
 
 .main {
+  /* Layout below sizes from the app's own width (container queries, cqi) rather than the screen's, so it stays
+     right when the app is turned against a sideways phone. */
+  container-type: inline-size;
   flex: 1;
   width: 100%;
   max-width: 1080px;
@@ -168,7 +171,7 @@
   color: #c8e66b;
 }
 
-@media (max-width: 359px) {
+@container (max-width: 327px) {
   .patch__shield {
     width: 52px;
     height: 56px;
@@ -227,56 +230,65 @@
   color: var(--muted);
 }
 
-.upright {
-  display: none;
-}
-
-/* A phone on its side (short and touch-driven): cover the app and ask for it to be turned back. */
+/* A phone turned sideways: turn the page back against it so the app stays put, as if rotation were locked
+   (iPhones don't let web apps lock it). usePhoneTurn sets data-turn to the way the phone's top now points. The
+   page is portrait-sized and pinned, and scrolls inside .spark-root so the camo backdrop stays behind it. */
 @media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
-  .upright {
+  :root[data-turn],
+  :root[data-turn] body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  :root[data-turn] #root {
     position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: grid;
-    place-items: center;
-    align-content: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: #0c120a;
-    color: #c8e66b;
+    top: 0;
+    left: 0;
+    width: 100vh;
+    width: 100dvh;
+    height: 100vw;
+    height: 100dvw;
+    overflow: hidden;
+    transform-origin: top left;
   }
 
-  .upright__phone {
-    animation: upright-turn 1.6s ease-in-out infinite;
+  :root[data-turn='left'] #root {
+    transform: translateY(100vh) rotate(-90deg);
+    transform: translateY(100dvh) rotate(-90deg);
   }
 
-  .upright__text {
-    margin: 0;
-    font-family: var(--font-stencil);
-    font-size: 1.2rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #d9e8c4;
+  :root[data-turn='right'] #root {
+    transform: translateX(100vw) rotate(90deg);
+    transform: translateX(100dvw) rotate(90deg);
+  }
+
+  :root[data-turn] .spark-root {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: none;
+    scrollbar-width: none;
+    /* The notch is now along the app's top edge. */
+    padding-top: max(env(safe-area-inset-left), env(safe-area-inset-right));
+    padding-bottom: 0;
+  }
+
+  :root[data-turn] .spark-root::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* The header sizes from the screen's width, which is now the app's height. */
+  :root[data-turn] .hero__logo {
+    height: clamp(190px, 46vh, 280px);
+    height: clamp(190px, 46dvh, 280px);
+  }
+
+  :root[data-turn] .hero__sub {
+    font-size: clamp(1.15rem, 4.8vh, 1.6rem);
+    font-size: clamp(1.15rem, 4.8dvh, 1.6rem);
   }
 }
 
-@keyframes upright-turn {
-  0%,
-  20% {
-    transform: rotate(-90deg);
-  }
-
-  60%,
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .upright__phone {
-    animation: none;
-  }
-}
 
 /* ---------- Controls ---------- */
 
@@ -415,7 +427,7 @@
   flex-basis: 100%;
 }
 
-@media (min-width: 560px) {
+@container (min-width: 528px) {
   .add-row .text-input {
     flex-basis: auto;
   }
@@ -455,7 +467,7 @@
   gap: 0;
 }
 
-@media (min-width: 760px) {
+@container (min-width: 728px) {
   .roster {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: 1rem;
@@ -872,7 +884,7 @@
 }
 
 /* Date and time sit side by side only where there's room for both in full. */
-@media (min-width: 480px) {
+@container (min-width: 448px) {
   .field-row {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -953,7 +965,7 @@
   gap: 0.35rem;
   text-align: center;
   font-family: var(--font-stencil);
-  font-size: clamp(1rem, 4.6vw, 1.35rem);
+  font-size: clamp(1rem, 5cqi, 1.35rem);
   letter-spacing: 0.06em;
   color: var(--ink);
   text-transform: uppercase;
@@ -1283,7 +1295,7 @@
 }
 
 /* Very narrow phones: slightly smaller names and position buttons so long names have room. */
-@media (max-width: 359px) {
+@container (max-width: 327px) {
   .roster__row {
     gap: 0.35rem;
     padding-left: 0.5rem;

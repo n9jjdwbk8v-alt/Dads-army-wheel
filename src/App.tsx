@@ -9,6 +9,7 @@ import TeamsView from './components/TeamsView';
 import GameDay from './components/GameDay';
 import Fees from './components/Fees';
 import InstallTip from './components/InstallTip';
+import { usePhoneTurn } from './components/usePhoneTurn';
 import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
 import { NEW_FEES, readFees, type FeesState } from './lib/fees';
 import { NO_TEAMS, recordGame, todayKey, type GameRecord, type Player, type Teams } from './lib/teams';
@@ -30,6 +31,8 @@ export default function App() {
   const [history, setHistory] = usePersistentState<GameRecord[]>('dads-army:history', []);
   const [gameDay, setGameDay] = usePersistentState<GameDayState>('dads-army:gameday', NEW_GAME_DAY);
   const [fees, setFees] = usePersistentState<FeesState>('dads-army:fees', NEW_FEES, readFees);
+  // Sparks are placed by screen position, which doesn't match the page while it's turned against the phone.
+  const turned = usePhoneTurn();
   const [tab, setTab] = useState<Tab>(() => launchTab ?? (teams.light.length ? 'teams' : 'roster'));
 
   // Tidy the launch link away once it's been read, so a refresh doesn't repeat it.
@@ -55,7 +58,13 @@ export default function App() {
   };
 
   return (
-    <ClickSpark sparkColor={['#7bd64a', '#c8e66b', '#ffffff']} sparkCount={10} sparkRadius={22} className="spark-root">
+    <ClickSpark
+      sparkColor={['#7bd64a', '#c8e66b', '#ffffff']}
+      sparkCount={10}
+      sparkRadius={22}
+      disabled={turned}
+      className="spark-root"
+    >
       <Backdrop />
 
       <header className="hero">
@@ -91,15 +100,6 @@ export default function App() {
       </main>
 
       <InstallTip />
-
-      {/* Phones turned sideways get this instead of the app, which is laid out for upright use. */}
-      <div className="upright" aria-hidden="true">
-        <svg className="upright__phone" viewBox="0 0 24 24" width="64" height="64">
-          <rect x="7" y="2.5" width="10" height="19" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          <path d="M10.5 18.5h3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-        <p className="upright__text">Turn your phone upright</p>
-      </div>
     </ClickSpark>
   );
 }
