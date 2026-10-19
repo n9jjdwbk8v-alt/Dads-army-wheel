@@ -7,19 +7,22 @@ import Roster from './components/Roster';
 import Backup from './components/Backup';
 import TeamsView from './components/TeamsView';
 import GameDay from './components/GameDay';
+import Fees from './components/Fees';
 import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
+import { NEW_FEES, type FeesState } from './lib/fees';
 import { NO_TEAMS, recordGame, todayKey, type GameRecord, type Player, type Teams } from './lib/teams';
 import type { Backup as BackupData } from './lib/backup';
 import { usePersistentState } from './lib/storage';
 import './App.css';
 
-type Tab = 'roster' | 'teams' | 'gameday';
+type Tab = 'roster' | 'teams' | 'gameday' | 'fees';
 
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);
   const [teams, setTeams] = usePersistentState<Teams>('dads-army:teams', NO_TEAMS);
   const [history, setHistory] = usePersistentState<GameRecord[]>('dads-army:history', []);
   const [gameDay, setGameDay] = usePersistentState<GameDayState>('dads-army:gameday', NEW_GAME_DAY);
+  const [fees, setFees] = usePersistentState<FeesState>('dads-army:fees', NEW_FEES);
   const [tab, setTab] = useState<Tab>(() => (teams.light.length ? 'teams' : 'roster'));
 
   const present = players.filter(p => p.here);
@@ -35,6 +38,7 @@ export default function App() {
   const restore = (backup: BackupData) => {
     setPlayers(() => backup.players);
     setHistory(backup.history);
+    if (backup.fees) setFees(backup.fees);
     setTeams(NO_TEAMS);
   };
 
@@ -53,7 +57,8 @@ export default function App() {
             items={[
               { value: 'roster', label: `Roster (${present.length}/${players.length})` },
               { value: 'teams', label: 'Teams' },
-              { value: 'gameday', label: 'Game day' }
+              { value: 'gameday', label: 'Game day' },
+              { value: 'fees', label: 'Fees' }
             ]}
             value={tab}
             onChange={v => setTab(v as Tab)}
@@ -62,18 +67,20 @@ export default function App() {
             textColor="#0f5132"
             activeTextColor="#ffffff"
             aria-label="Section"
+            equalSlots={false}
           />
         </nav>
 
         {tab === 'roster' && (
           <Roster players={players} setPlayers={setPlayers}>
-            <Backup players={players} history={history} onRestore={restore} />
+            <Backup players={players} history={history} fees={fees} onRestore={restore} />
           </Roster>
         )}
         {tab === 'teams' && <TeamsView present={present} teams={teams} recent={recent} onSplit={split} />}
         {tab === 'gameday' && (
           <GameDay players={players} setPlayers={setPlayers} gameDay={gameDay} setGameDay={setGameDay} />
         )}
+        {tab === 'fees' && <Fees players={players} fees={fees} setFees={setFees} />}
       </main>
 
       <footer className="foot">Saved on this device · Lights vs Darks</footer>

@@ -30,3 +30,16 @@ export const copyText = async (text: string) => {
     return false;
   }
 };
+
+/** Opens the share sheet with `text` (so it can go straight to WhatsApp), or copies it where that isn't supported. */
+export const shareText = async (text: string): Promise<'shared' | 'copied' | 'failed'> => {
+  if (navigator.share) {
+    try {
+      await navigator.share({ text });
+      return 'shared';
+    } catch (e) {
+      if ((e as Error).name === 'AbortError') return 'shared';
+    }
+  }
+  return (await copyText(text)) ? 'copied' : 'failed';
+};

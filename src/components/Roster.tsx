@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import ScrubField from './reactbits/ScrubField';
 import SpringCheck from './reactbits/SpringCheck';
+import { useConfirmTap } from './useConfirmTap';
 import { isGoalie, type Player } from '../lib/teams';
 
 type RosterProps = {
@@ -13,15 +14,8 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
   const [name, setName] = useState('');
   const [skill, setSkill] = useState(5);
   const [filter, setFilter] = useState('');
-  // Id of the player whose × was tapped once; a second tap removes them. Popups like confirm() are
-  // blocked in some Home Screen apps and embedded previews, so the check happens in the page instead.
-  const [arming, setArming] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!arming) return;
-    const t = setTimeout(() => setArming(null), 4000);
-    return () => clearTimeout(t);
-  }, [arming]);
+  // Id of the player whose × was tapped once; a second tap removes them.
+  const [arming, confirmTap] = useConfirmTap();
 
   const hereCount = players.filter(p => p.here).length;
   const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name));
@@ -39,9 +33,7 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
   };
 
   const remove = (p: Player) => {
-    if (arming !== p.id) return setArming(p.id);
-    setArming(null);
-    setPlayers(ps => ps.filter(x => x.id !== p.id));
+    if (confirmTap(p.id)) setPlayers(ps => ps.filter(x => x.id !== p.id));
   };
 
   const setAll = (here: boolean) => setPlayers(ps => ps.map(p => ({ ...p, here })));

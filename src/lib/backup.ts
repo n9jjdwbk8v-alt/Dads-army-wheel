@@ -1,11 +1,12 @@
+import { readFees, type FeesState } from './fees';
 import type { GameRecord, Player } from './teams';
 
-export type Backup = { players: Player[]; history: GameRecord[]; saved: string };
+export type Backup = { players: Player[]; history: GameRecord[]; fees?: FeesState; saved: string };
 
 const APP = 'dads-army-team-picker';
 
-export const makeBackupFile = (players: Player[], history: GameRecord[]) => {
-  const body = { app: APP, version: 1, saved: new Date().toISOString(), players, history };
+export const makeBackupFile = (players: Player[], history: GameRecord[], fees: FeesState) => {
+  const body = { app: APP, version: 1, saved: new Date().toISOString(), players, history, fees };
   return new File([JSON.stringify(body, null, 2)], `dads-army-roster-${new Date().toISOString().slice(0, 10)}.json`, {
     type: 'application/json'
   });
@@ -21,7 +22,7 @@ export const readBackupFile = async (file: File): Promise<Backup> => {
   } catch {
     throw new Error("That file isn't a Dads Army backup.");
   }
-  const d = data as { app?: unknown; players?: unknown; history?: unknown; saved?: unknown };
+  const d = data as { app?: unknown; players?: unknown; history?: unknown; fees?: unknown; saved?: unknown };
   if (d?.app !== APP || !Array.isArray(d.players)) throw new Error("That file isn't a Dads Army backup.");
 
   const seen = new Set<string>();
@@ -45,5 +46,6 @@ export const readBackupFile = async (file: File): Promise<Backup> => {
         .map(g => ({ date: g.date as string, light: g.light as string[], dark: g.dark as string[] }))
     : [];
 
-  return { players, history, saved: typeof d.saved === 'string' ? d.saved : '' };
+  // Backups from before the Fees tab have no fees; restoring one leaves the fees on this phone alone.
+  return { players, history, fees: readFees(d.fees), saved: typeof d.saved === 'string' ? d.saved : '' };
 };

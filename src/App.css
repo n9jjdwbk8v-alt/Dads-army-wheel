@@ -821,6 +821,166 @@
   color: #fff;
 }
 
+/* ---------- Fees ---------- */
+
+.fees .panel {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.fees .sheet-switch {
+  justify-self: center;
+}
+
+.fees .sheet-switch__arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.fees .roster-bar,
+.fees .roster,
+.fees .muted,
+.fees .empty,
+.fees .split__actions {
+  margin: 0;
+}
+
+.fees__count {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.fees__start {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+
+.fees__start .muted {
+  max-width: 34ch;
+}
+
+.fees__title {
+  margin: 0;
+}
+
+.fees__total {
+  margin: 0;
+  font-family: var(--font-stencil);
+  font-size: 1.5rem;
+  color: #b42318;
+}
+
+.fees__tag {
+  flex: none;
+  min-width: 3.4rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  color: var(--green-800);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.fees__tag--paid {
+  background: var(--green-600);
+  border-color: var(--green-600);
+  color: #fff;
+}
+
+.fees__row--paid {
+  opacity: 0.75;
+}
+
+.fees__debt {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.fees__who {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.fees__name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--green-800);
+  overflow-wrap: break-word;
+}
+
+.fees__who .small {
+  margin: 0;
+}
+
+.fees__amount {
+  font-weight: 800;
+  color: #b42318;
+}
+
+.fees__settle {
+  flex: none;
+  min-width: 5.5rem;
+  padding-left: 0.7rem;
+  padding-right: 0.7rem;
+}
+
+.fees__send {
+  justify-self: center;
+}
+
+.fees__settings {
+  justify-items: start;
+}
+
+.fees__settings .field {
+  width: min(100%, 220px);
+}
+
+.btn--danger,
+.btn--danger:hover:not(:disabled) {
+  background: #b42318;
+  border-color: #b42318;
+  color: #fff;
+}
+
+.money-input {
+  position: relative;
+  display: block;
+}
+
+.money-input__sign {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: 600;
+  color: var(--green-800);
+  pointer-events: none;
+}
+
+.money-input .text-input {
+  width: 100%;
+  padding-left: 1.8rem;
+}
+
+/* Four tabs, each as wide as its label: tighten them on phones so they fit with a two-digit roster count. */
+@media (max-width: 420px) {
+  .tabs .rubber-segment {
+    --rs-pad: 9px !important;
+    --rs-font: 12.5px !important;
+  }
+}
+
 /* Very narrow phones: slightly smaller names and position buttons so long names have room. */
 @media (max-width: 359px) {
   .roster__row {

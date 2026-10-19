@@ -1,22 +1,24 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { makeBackupFile, readBackupFile, type Backup as BackupData } from '../lib/backup';
 import { shareOrDownload } from '../lib/share';
+import type { FeesState } from '../lib/fees';
 import type { GameRecord, Player } from '../lib/teams';
 
 type BackupProps = {
   players: Player[];
   history: GameRecord[];
+  fees: FeesState;
   onRestore: (backup: BackupData) => void;
 };
 
-export default function Backup({ players, history, onRestore }: BackupProps) {
+export default function Backup({ players, history, fees, onRestore }: BackupProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState('');
   // A read backup waiting for the user to confirm it in the page (confirm() is blocked in some apps).
   const [pending, setPending] = useState<BackupData | null>(null);
 
   const save = async () => {
-    await shareOrDownload(makeBackupFile(players, history));
+    await shareOrDownload(makeBackupFile(players, history, fees));
   };
 
   const restore = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -43,7 +45,7 @@ export default function Backup({ players, history, onRestore }: BackupProps) {
     <section className="backup">
       <p className="backup__title">Backup</p>
       <p className="muted small">
-        Save the roster as a file to keep somewhere safe, or to move it to another phone.
+        Save the roster, game history and fees as a file to keep somewhere safe, or to move them to another phone.
       </p>
       <div className="backup__actions">
         <button className="btn btn--ghost" onClick={save} disabled={!players.length}>
