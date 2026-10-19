@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { BombIcon } from '@hugeicons/core-free-icons';
-import SwipeRow from './reactbits/SwipeRow';
+import SlideCommit from './reactbits/SlideCommit';
 import { useRendered } from './useRendered';
 import { copyText, download as downloadFile, shareOrDownload } from '../lib/share';
 import { isGoalie, splitTeams, stackTeams, TEAM_LABEL, type GameRecord, type Player, type Team, type Teams } from '../lib/teams';
@@ -43,8 +43,6 @@ const idsKey = (players: Player[]) =>
 
 export default function TeamsView({ present, teams, recent, onSplit }: TeamsViewProps) {
   const [copied, setCopied] = useState(false);
-  // Bumped after Dan Smith mode so the classified strip comes back closed.
-  const [classified, setClassified] = useState(0);
   const [savedDesign, setDesign] = usePersistentState<GraphicDesign>('dads-army:graphic-design', 'rink');
   const design = GRAPHIC_DESIGNS.some(d => d.value === savedDesign) ? savedDesign : 'rink';
   const hasTeams = teams.light.length + teams.dark.length > 0;
@@ -136,34 +134,21 @@ export default function TeamsView({ present, teams, recent, onSplit }: TeamsView
           <p className="muted small">Mixes things up from your last game ({gameDate(recent[0].date)}) where it can.</p>
         )}
         {enough && (
-          // A faint classified badge: swipe left to right inside it to fill it with Dan Smith mode, then tap.
+          // A faint classified badge: slide inside it, left to right, to fill it with Dan Smith mode.
           <div className="classified">
-            <SwipeRow
-              key={classified}
+            <SlideCommit
               label="Classified"
-              direction="right"
+              doneLabel="Dan Smith mode"
+              width={220}
               height={38}
-              radius={2}
-              actionWidth={220}
-              fullSwipe={false}
-              rowColor="#151d10"
-              drawerColor="#151d10"
-              actionColor="#c4321f"
-              textColor="#e6f0d6"
-              actions={[
-                {
-                  id: 'dan-smith',
-                  label: 'Dan Smith mode',
-                  icon: <HugeiconsIcon icon={BombIcon} size={16} strokeWidth={2} />
-                }
-              ]}
-              onCommit={() => {
-                onSplit(stackTeams(present));
-                setClassified(c => c + 1);
-              }}
-            >
-              <span className="classified__word">Classified</span>
-            </SwipeRow>
+              radius={3}
+              trackColor="#151d10"
+              handleColor="#c4321f"
+              successColor="#c4321f"
+              holdMs={1800}
+              icon={<HugeiconsIcon icon={BombIcon} size={16} strokeWidth={2} />}
+              onConfirm={() => onSplit(stackTeams(present))}
+            />
           </div>
         )}
         {stale && <p className="notice">Who's here has changed since these teams were made. Split again.</p>}
