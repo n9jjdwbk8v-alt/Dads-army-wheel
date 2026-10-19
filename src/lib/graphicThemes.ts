@@ -34,7 +34,7 @@ const MONO = '"Share Tech Mono", "Courier New", monospace';
 const BODY = 'Inter, system-ui, sans-serif';
 const MARKER = '"Permanent Marker", "Comic Sans MS", cursive';
 const HAND = '"Gochi Hand", "Comic Sans MS", cursive';
-const COMIC = 'Bangers, Impact, sans-serif';
+export const COMIC = 'Bangers, Impact, sans-serif';
 const ENGRAVED = 'Cinzel, Georgia, serif';
 const NEON = '"Tilt Neon", "Arial Rounded MT Bold", sans-serif';
 
