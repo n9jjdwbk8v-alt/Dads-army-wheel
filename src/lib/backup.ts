@@ -25,27 +25,39 @@ export const readBackupFile = async (file: File): Promise<Backup> => {
   const d = data as { app?: unknown; players?: unknown; history?: unknown; fees?: unknown; saved?: unknown };
   if (d?.app !== APP || !Array.isArray(d.players)) throw new Error("That file isn't a Dads Army backup.");
 
+  return {
+    players: readPlayers(d.players),
+    history: readHistory(d.history),
+    // Backups from before the Fees tab have no fees; restoring one leaves the fees on this phone alone.
+    fees: readFees(d.fees),
+    saved: typeof d.saved === 'string' ? d.saved : ''
+  };
+};
+
+/** Keeps only well-formed players, giving any missing or repeated ids new ones. */
+export const readPlayers = (raw: unknown): Player[] => {
+  if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();
   const players: Player[] = [];
-  for (const raw of d.players as Record<string, unknown>[]) {
-    const name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 40) : '';
+  for (const p of raw as Record<string, unknown>[]) {
+    const name = typeof p?.name === 'string' ? p.name.trim().slice(0, 40) : '';
     if (!name) continue;
-    let id = typeof raw.id === 'string' && raw.id ? raw.id : crypto.randomUUID();
+    let id = typeof p.id === 'string' && p.id ? p.id : crypto.randomUUID();
     if (seen.has(id)) id = crypto.randomUUID();
     seen.add(id);
     // A missing or garbled rating falls back to a middling 5 rather than 0, which would mean goalie.
-    const rating = Number(raw.skill);
+    const rating = Number(p.skill);
     const skill = Number.isFinite(rating) ? Math.min(10, Math.max(0, Math.round(rating))) : 5;
-    const position = raw.position === 'F' || raw.position === 'D' || raw.position === 'G' ? raw.position : undefined;
-    players.push({ id, name, skill, here: raw.here !== false, ...(position ? { position } : {}) });
+    const position = p.position === 'F' || p.position === 'D' || p.position === 'G' ? p.position : undefined;
+    players.push({ id, name, skill, here: p.here !== false, ...(position ? { position } : {}) });
   }
+  return players;
+};
 
-  const history = Array.isArray(d.history)
-    ? (d.history as Record<string, unknown>[])
+/** Keeps only well-formed game records. */
+export const readHistory = (raw: unknown): GameRecord[] =>
+  Array.isArray(raw)
+    ? (raw as Record<string, unknown>[])
         .filter(g => typeof g?.date === 'string' && isStringArray(g.light) && isStringArray(g.dark))
         .map(g => ({ date: g.date as string, light: g.light as string[], dark: g.dark as string[] }))
     : [];
-
-  // Backups from before the Fees tab have no fees; restoring one leaves the fees on this phone alone.
-  return { players, history, fees: readFees(d.fees), saved: typeof d.saved === 'string' ? d.saved : '' };
-};

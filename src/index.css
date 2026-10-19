@@ -36,6 +36,15 @@ body,
 body {
   min-height: 100vh;
   background: #0c120a;
+  /* App feel: no grey flash on taps or rubber-band reveal of the page edge. */
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 
 button {

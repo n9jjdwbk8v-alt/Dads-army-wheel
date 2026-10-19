@@ -463,6 +463,122 @@
   color: var(--green-800);
 }
 
+/* ---------- Team save ---------- */
+
+.team-sync__form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.team-sync__input {
+  font-family: var(--font-stencil);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.team-sync__input::placeholder {
+  font-family: var(--font-body);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.team-sync__code {
+  margin: 0.2rem 0 0.1rem;
+  font-family: var(--font-stencil);
+  font-size: clamp(1.3rem, 7vw, 1.8rem);
+  letter-spacing: 0.08em;
+  color: var(--green-800);
+  overflow-wrap: anywhere;
+}
+
+.team-sync__status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--green-800);
+}
+
+.team-sync__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green-600);
+}
+
+.team-sync__status--saving .team-sync__dot {
+  background: #d4a017;
+  animation: sync-pulse 1s ease-in-out infinite alternate;
+}
+
+.team-sync__status--offline,
+.team-sync__status--error,
+.team-sync__status--unavailable {
+  color: #8a5a00;
+}
+
+.team-sync__status--offline .team-sync__dot,
+.team-sync__status--error .team-sync__dot,
+.team-sync__status--unavailable .team-sync__dot {
+  background: #d4a017;
+}
+
+@keyframes sync-pulse {
+  to {
+    opacity: 0.3;
+  }
+}
+
+/* ---------- Install tip ---------- */
+
+.install {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem 0.85rem;
+  align-items: center;
+  width: calc(100% - 2rem);
+  max-width: 560px;
+  margin: 0 auto 1.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(18, 24, 13, 0.92);
+  border: 1px solid #3d4a2c;
+  color: #d9e8c4;
+  box-shadow: 0 12px 30px -16px rgba(0, 0, 0, 0.8);
+}
+
+.install__icon {
+  border-radius: 12px;
+}
+
+.install__title {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-stencil);
+  letter-spacing: 0.05em;
+  color: #c8e66b;
+}
+
+.install__hint {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.install__share {
+  vertical-align: -3px;
+}
+
+.install__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 /* ---------- Split ---------- */
 
 .split {

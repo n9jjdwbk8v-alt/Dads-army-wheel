@@ -1,15 +1,72 @@
 {
+  "id": "./",
   "name": "Dads Army",
   "short_name": "Dads Army",
   "description": "Balanced Lights vs Darks team picker for Dads Army ice hockey.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0c120a",
   "theme_color": "#12180d",
+  "categories": [
+    "sports",
+    "utilities"
+  ],
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Teams",
+      "short_name": "Teams",
+      "description": "Pick Lights vs Darks",
+      "url": "./?tab=teams",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Fees",
+      "short_name": "Fees",
+      "description": "Tick off who has paid",
+      "url": "./?tab=fees",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Game day",
+      "short_name": "Game day",
+      "description": "Team sheet and lines",
+      "url": "./?tab=gameday",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
   ]
 }
