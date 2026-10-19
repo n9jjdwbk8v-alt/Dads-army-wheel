@@ -3,12 +3,16 @@ import SpringCheck from './reactbits/SpringCheck';
 import { useConfirmTap } from './useConfirmTap';
 import {
   debts,
+  dueFor,
+  feeFor,
   money,
   nightLabel,
   nightText,
+  nightTotals,
   owedText,
   settleUp,
   startNight,
+  type FeeDue,
   type FeeNight,
   type FeesState
 } from '../lib/fees';
@@ -211,11 +215,17 @@ export default function Fees({ players, fees, setFees }: FeesProps) {
 
       <div className="panel fees__settings">
         <p className="panel__title fees__title">New nights</p>
-        <p className="muted small">What a new night starts with. Change a single night's fee on the night itself.</p>
-        <label className="field">
-          <span>Fee per player</span>
-          <MoneyInput value={fees.amount} onChange={amount => setFees(f => ({ ...f, amount }))} />
-        </label>
+        <p className="muted small">What a new night starts with. Change a single night's prices on the night itself.</p>
+        <div className="fees__prices">
+          <label className="field">
+            <span>Player</span>
+            <MoneyInput value={fees.amount} onChange={amount => setFees(f => ({ ...f, amount }))} />
+          </label>
+          <label className="field">
+            <span>Goalie</span>
+            <MoneyInput value={fees.goalieAmount} onChange={goalieAmount => setFees(f => ({ ...f, goalieAmount }))} />
+          </label>
+        </div>
       </div>
     </section>
   );
@@ -234,29 +244,40 @@ function NightView({ night, players, editing, setEditing, onChange }: NightViewP
   const paid = new Set(night.paid);
   const due = new Set(night.due.map(d => d.id));
   const names = new Map(players.map(p => [p.id, p.name]));
-  const nameOf = (d: { id: string; name: string }) => names.get(d.id) ?? d.name;
+  const nameOf = (d: FeeDue) => names.get(d.id) ?? d.name;
   const rows = [...night.due].sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
   const paidCount = night.due.filter(d => paid.has(d.id)).length;
+  const totals = nightTotals(night);
 
   const setPaid = (id: string, on: boolean) =>
     onChange(n => ({ ...n, paid: on ? [...n.paid.filter(x => x !== id), id] : n.paid.filter(x => x !== id) }));
 
-  const setDue = (p: { id: string; name: string }, on: boolean) =>
+  const setDue = (p: FeeDue, on: boolean) =>
     onChange(n => ({
       ...n,
-      due: on ? [...n.due.filter(d => d.id !== p.id), { id: p.id, name: p.name }] : n.due.filter(d => d.id !== p.id),
+      due: on ? [...n.due.filter(d => d.id !== p.id), p] : n.due.filter(d => d.id !== p.id),
       paid: on ? n.paid : n.paid.filter(x => x !== p.id)
     }));
 
   // Everyone on the roster, plus anyone on this night who has since left it.
-  const everyone = [
-    ...players.map(p => ({ id: p.id, name: p.name })),
-    ...night.due.filter(d => !names.has(d.id))
-  ].sort((a, b) => a.name.localeCompare(b.name));
+  const everyone = [...players.map(dueFor), ...night.due.filter(d => !names.has(d.id))].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  );
+
+  const label = (d: FeeDue) => (
+    <>
+      {nameOf(d)}
+      {d.goalie && (
+        <span className="goalie-tag" title="Goalie">
+          G
+        </span>
+      )}
+    </>
+  );
 
   return (
     <>
-      <div className="field-row fees__fields">
+      <div className="fees__fields">
         <label className="field">
           <span>Date</span>
           <input
@@ -266,16 +287,21 @@ function NightView({ night, players, editing, setEditing, onChange }: NightViewP
             onChange={e => e.target.value && onChange(n => ({ ...n, date: e.target.value }))}
           />
         </label>
-        <label className="field">
-          <span>Fee per player</span>
-          <MoneyInput value={night.amount} onChange={amount => onChange(n => ({ ...n, amount }))} />
-        </label>
+        <div className="fees__prices">
+          <label className="field">
+            <span>Player</span>
+            <MoneyInput value={night.amount} onChange={amount => onChange(n => ({ ...n, amount }))} />
+          </label>
+          <label className="field">
+            <span>Goalie</span>
+            <MoneyInput value={night.goalieAmount} onChange={goalieAmount => onChange(n => ({ ...n, goalieAmount }))} />
+          </label>
+        </div>
       </div>
 
       <div className="roster-bar">
         <p className="roster-count">
-          <strong>{paidCount}</strong> of {night.due.length} paid · {money(paidCount * night.amount)} of{' '}
-          {money(night.due.length * night.amount)}
+          <strong>{paidCount}</strong> of {night.due.length} paid · {money(totals.paid)} of {money(totals.due)}
         </p>
         <div className="roster-actions">
           {!editing && night.due.length > 0 && paidCount < night.due.length && (
@@ -298,7 +324,7 @@ function NightView({ night, players, editing, setEditing, onChange }: NightViewP
             <ul className="roster">
               {everyone.map(p => (
                 <li key={p.id} className={due.has(p.id) ? 'roster__row' : 'roster__row roster__row--away'}>
-                  <SpringCheck {...CHECK} label={p.name} checked={due.has(p.id)} onChange={on => setDue(p, on)} />
+                  <SpringCheck {...CHECK} label={label(p)} checked={due.has(p.id)} onChange={on => setDue(p, on)} />
                 </li>
               ))}
             </ul>
@@ -312,9 +338,9 @@ function NightView({ night, players, editing, setEditing, onChange }: NightViewP
           <ul className="roster">
             {rows.map(d => (
               <li key={d.id} className={paid.has(d.id) ? 'roster__row fees__row--paid' : 'roster__row'}>
-                <SpringCheck {...CHECK} label={nameOf(d)} checked={paid.has(d.id)} onChange={on => setPaid(d.id, on)} />
+                <SpringCheck {...CHECK} label={label(d)} checked={paid.has(d.id)} onChange={on => setPaid(d.id, on)} />
                 <span className={paid.has(d.id) ? 'fees__tag fees__tag--paid' : 'fees__tag'}>
-                  {paid.has(d.id) ? 'Paid' : money(night.amount)}
+                  {paid.has(d.id) ? 'Paid' : money(feeFor(night, d))}
                 </span>
               </li>
             ))}

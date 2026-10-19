@@ -1195,8 +1195,20 @@
   justify-items: start;
 }
 
-.fees__settings .field {
-  width: min(100%, 220px);
+/* Player and goalie prices side by side, even on a small phone. */
+.fees__fields {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.fees__prices {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.fees__settings .fees__prices {
+  width: min(100%, 320px);
 }
 
 .btn--danger,
