@@ -12,6 +12,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD && window.top === windo
   });
 }
 
+// iPhones ignore the page's no-zoom setting, so stop their pinch gestures directly.
+for (const gesture of ['gesturestart', 'gesturechange', 'gestureend']) {
+  document.addEventListener(gesture, e => e.preventDefault(), { passive: false });
+}
+
 // Ask the browser to keep this site's saved roster, history and fees rather than clearing them when the phone
 // runs low on space. Installed (Home Screen) apps usually get this automatically.
 navigator.storage?.persist?.().catch(() => {});

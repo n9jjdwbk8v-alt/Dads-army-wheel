@@ -45,6 +45,13 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* No pinch or double-tap zoom: panning only (touch-action applies through every element inside). */
+html,
+body,
+#root {
+  touch-action: pan-x pan-y;
+}
+
 #root {
   height: 100%;
   overflow-x: hidden;
