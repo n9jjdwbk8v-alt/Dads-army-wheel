@@ -1,5 +1,5 @@
 :root {
-  /* Light text on dark olive cards over the camo, with lime for anything picked. */
+  /* Dark glass: light text on see-through dark cards over the camo, with lime for anything picked. */
   --ink: #e6f0d6;
   --muted: #9fb28a;
   --line: rgba(200, 230, 107, 0.16);
@@ -9,7 +9,7 @@
   --fill: rgba(255, 255, 255, 0.05);
   --fill-2: rgba(200, 230, 107, 0.1);
   --fill-3: rgba(200, 230, 107, 0.2);
-  --card: #1a2214;
+  --glass: rgba(14, 20, 10, 0.72);
   --danger: #ff6b5b;
   --danger-bg: #c4321f;
   --accent: #a3e635;
