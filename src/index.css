@@ -30,18 +30,26 @@
   box-sizing: border-box;
 }
 
-/* App feel: the page itself never moves or bounces; the app scrolls inside #root, with no scroll bar and no
-   rubber-band stretch past the top or bottom. */
+/* App feel: the page scrolls as normal (so it runs under the phone's see-through bars), but with no scroll bar
+   and no rubber-band stretch past the top or bottom. */
+html {
+  scrollbar-width: none;
+  overscroll-behavior: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
 html,
 body {
-  height: 100%;
   margin: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
+  min-height: 100%;
 }
 
 body {
   background: #0c120a;
+  overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -50,18 +58,6 @@ html,
 body,
 #root {
   touch-action: pan-x pan-y;
-}
-
-#root {
-  height: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: none;
-  scrollbar-width: none;
-}
-
-#root::-webkit-scrollbar {
-  display: none;
 }
 
 button {
