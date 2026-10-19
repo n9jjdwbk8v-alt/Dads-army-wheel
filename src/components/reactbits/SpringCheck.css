@@ -107,6 +107,8 @@
 .spring-check__label {
   position: relative;
   display: inline-block;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 .spring-check__word {

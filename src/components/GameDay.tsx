@@ -132,7 +132,7 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay }: Ga
       <div className="panel gameday__details">
         <RubberSegment
           items={[
-            { value: 'game', label: 'Game · Team sheet' },
+            { value: 'game', label: 'Game' },
             { value: 'scrimmage', label: 'Scrimmage' }
           ]}
           value={gameDay.kind}

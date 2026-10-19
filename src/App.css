@@ -250,12 +250,14 @@
   margin: 0;
   padding: 0;
   display: grid;
+  /* minmax(0, …) keeps long names from pushing rows past the panel edge. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.35rem;
 }
 
 @media (min-width: 760px) {
   .roster {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: 1rem;
   }
 }
@@ -547,11 +549,33 @@
 
 .field-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.85rem;
+}
+
+/* Date and time sit side by side only where there's room for both in full. */
+@media (min-width: 480px) {
+  .field-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* iPhones give date and time boxes their own sizing; make them behave like the other boxes. */
+.text-input[type='date'],
+.text-input[type='time'] {
+  display: block;
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  line-height: 44px;
+}
+
+.text-input::-webkit-date-and-time-value {
+  text-align: left;
 }
 
 .pos-picker {
+  flex: none;
   display: flex;
   gap: 4px;
   padding: 3px;
@@ -560,7 +584,7 @@
 }
 
 .pos {
-  width: 34px;
+  width: 32px;
   height: 34px;
   border: 0;
   border-radius: 9px;
@@ -604,11 +628,14 @@
 }
 
 .sheet-switch__title {
+  flex: 1;
+  min-width: 0;
   display: grid;
   justify-items: center;
   gap: 0.35rem;
+  text-align: center;
   font-family: var(--font-stencil);
-  font-size: 1.35rem;
+  font-size: clamp(1rem, 4.6vw, 1.35rem);
   letter-spacing: 0.06em;
   color: var(--green-800);
   text-transform: uppercase;
@@ -771,6 +798,24 @@
   background: var(--green-800);
   border-color: var(--green-800);
   color: #fff;
+}
+
+/* Very narrow phones: slightly smaller names and position buttons so long names have room. */
+@media (max-width: 359px) {
+  .roster__row {
+    gap: 0.35rem;
+    padding-left: 0.5rem;
+  }
+
+  .gameday .roster__check {
+    --sc-font: 15px !important;
+  }
+
+  .pos {
+    width: 28px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
 }
 
 /* ---------- Goalie tag ---------- */
