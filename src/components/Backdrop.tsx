@@ -5,7 +5,11 @@ import './Backdrop.css';
 
 /** Fixed woodland-camo page background. */
 export default function Backdrop() {
-  const tile = useMemo(() => camoTile('woodland').toDataURL('image/png'), []);
+  // The tile shows 420px across, drawn at the screen's own sharpness (up to 3×).
+  const tile = useMemo(() => {
+    const scale = (420 / 480) * Math.min(3, Math.max(1, window.devicePixelRatio || 1));
+    return camoTile('woodland', scale).toDataURL('image/png');
+  }, []);
   return (
     <div className="backdrop" aria-hidden>
       <div

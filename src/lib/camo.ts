@@ -33,39 +33,75 @@ export const periodicNoise = (rand: () => number, period: number) => {
   };
 };
 
-const tiles = new Map<CamoKind, HTMLCanvasElement>();
+const tiles = new Map<string, HTMLCanvasElement>();
 
-/** A seamless 480px camo tile, generated once per kind. */
-export const camoTile = (kind: CamoKind): HTMLCanvasElement => {
-  const cached = tiles.get(kind);
+/**
+ * A seamless camo tile, 480px across at `scale` 1 (pass the screen's pixel ratio for a sharp one), generated once
+ * per kind and scale. The pattern is worked out on a 240-cell grid and blended smoothly between cells for every
+ * pixel, so its edges are clean curves at any size rather than steps.
+ */
+export const camoTile = (kind: CamoKind, scale = 1): HTMLCanvasElement => {
+  const id = `${kind}@${scale}`;
+  const cached = tiles.get(id);
   if (cached) return cached;
 
-  const size = 480;
-  const cell = 2;
-  const grid = size / cell;
+  const grid = 240;
   const rand = mulberry32(kind === 'stone' ? 1940 : 1918);
   const octaves = [periodicNoise(rand, 3), periodicNoise(rand, 6), periodicNoise(rand, 12)];
   // Woodland's black "branches": thin bands where a second noise field crosses its midpoint.
   const branches = periodicNoise(rand, 4);
   const weights = kind === 'stone' ? [0.55, 0.3, 0.15] : [0.6, 0.3, 0.1];
-  const palette = CAMO_PALETTES[kind];
   // Thresholds split the noise into four roughly even bands of colour.
   const cuts = [0.4, 0.5, 0.6];
+  const colours = CAMO_PALETTES[kind].map(hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)));
+  const branchColour = [9, 12, 7];
 
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
+  // The noise fields on the grid, which wraps at its edges like the tile does.
+  const field = new Float32Array(grid * grid);
+  const branchField = new Float32Array(grid * grid);
   for (let gy = 0; gy < grid; gy++) {
     for (let gx = 0; gx < grid; gx++) {
       const u = gx / grid;
       const v = gy / grid;
-      const n = octaves.reduce((sum, f, i) => sum + f(u, v) * weights[i], 0);
-      const band = cuts.findIndex(c => n < c);
-      const branch = kind === 'woodland' && Math.abs(branches(u, v) - 0.5) < 0.03;
-      ctx.fillStyle = branch ? '#090c07' : palette[band === -1 ? 3 : band];
-      ctx.fillRect(gx * cell, gy * cell, cell, cell);
+      field[gy * grid + gx] = octaves.reduce((sum, f, i) => sum + f(u, v) * weights[i], 0);
+      branchField[gy * grid + gx] = branches(u, v);
     }
   }
-  tiles.set(kind, canvas);
+  const sample = (values: Float32Array, x: number, y: number) => {
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const fx = x - x0;
+    const fy = y - y0;
+    const at = (cx: number, cy: number) => values[(cy % grid) * grid + (cx % grid)];
+    const top = at(x0, y0) + (at(x0 + 1, y0) - at(x0, y0)) * fx;
+    const bottom = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx;
+    return top + (bottom - top) * fy;
+  };
+
+  const size = Math.round(480 * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+  const image = ctx.createImageData(size, size);
+  const step = grid / size;
+  for (let y = 0; y < size; y++) {
+    const gy = y * step;
+    for (let x = 0; x < size; x++) {
+      const gx = x * step;
+      const branch = kind === 'woodland' && Math.abs(sample(branchField, gx, gy) - 0.5) < 0.03;
+      let colour = branchColour;
+      if (!branch) {
+        const band = cuts.findIndex(c => sample(field, gx, gy) < c);
+        colour = colours[band === -1 ? 3 : band];
+      }
+      const i = (y * size + x) * 4;
+      image.data[i] = colour[0];
+      image.data[i + 1] = colour[1];
+      image.data[i + 2] = colour[2];
+      image.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+  tiles.set(id, canvas);
   return canvas;
 };
