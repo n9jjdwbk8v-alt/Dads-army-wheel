@@ -21,7 +21,7 @@ export const loadLogo = () =>
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => resolve(null);
-    img.src = new URL('logo.webp', document.baseURI).href;
+    img.src = new URL('logo.svg', document.baseURI).href;
   }));
 
 export const loadFonts = () => Promise.all(FONT_LOADS.map(f => document.fonts.load(f))).catch(() => undefined);
