@@ -68,7 +68,7 @@ export default function App() {
       <Backdrop />
 
       <header className="hero">
-        <img className="hero__logo" src="./logo.png" alt="Dads Army" width={467} height={520} />
+        <img className="hero__logo" src="./logo.webp" alt="Dads Army" width={467} height={520} />
         <ShinyText text="Team Picker" color="#d9e8c4" shineColor="#ffffff" speed={3} className="hero__sub" />
       </header>
 
