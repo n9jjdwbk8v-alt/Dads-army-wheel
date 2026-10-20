@@ -1,0 +1,117 @@
+/* The header logo as a stack of layers, each filling the logo's 467 x 520 box. Only whole layers move
+   (transform and opacity), so the browser can run the bite on the graphics chip without redrawing. */
+
+.chomp {
+  position: relative;
+  aspect-ratio: 467 / 520;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.chomp:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 6px;
+  border-radius: 12px;
+}
+
+.chomp img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+.chomp__rig,
+.chomp__part,
+.chomp__layer,
+.chomp__fx {
+  position: absolute;
+  inset: 0;
+}
+
+/* Until every layer is ready the plain logo shows; then they swap (they look identical at rest). Both
+   get their own layer so they land on the same pixels as the moving parts. */
+.chomp__still,
+.chomp__rig {
+  will-change: transform;
+}
+
+.chomp__rig {
+  visibility: hidden;
+}
+
+.chomp.is-ready .chomp__rig {
+  visibility: visible;
+}
+
+.chomp.is-ready .chomp__still {
+  visibility: hidden;
+}
+
+.chomp__part {
+  will-change: transform;
+}
+
+/* Pivots: the neck for the head, the back of the jaw for the hinge, the middle of the mouth for the stick. */
+.chomp__head {
+  transform-origin: 50.32% 80.77%;
+}
+
+.chomp__jaw {
+  transform-origin: 37.47% 67.69%;
+}
+
+.chomp__stick {
+  transform-origin: 51.39% 66.35%;
+}
+
+/* The bite mark left in the stick (231, 338 in logo units). */
+.chomp__notch {
+  position: absolute;
+  left: 49.46%;
+  top: 65%;
+  width: 3%;
+  height: 1.54%;
+  opacity: 0;
+}
+
+.chomp__notch svg,
+.chomp__shard svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.chomp__fx {
+  pointer-events: none;
+}
+
+.chomp__shard {
+  position: absolute;
+  width: 6.85%;
+  height: 2.31%;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.chomp__impact {
+  position: absolute;
+  width: 11.13%;
+  height: 1.73%;
+  margin-top: -0.96%;
+  border-radius: 999px;
+  background: #e4d841;
+  transform-origin: 0 50%;
+  opacity: 0;
+  will-change: transform, opacity;
+}

@@ -9,6 +9,7 @@ import TeamsView from './components/TeamsView';
 import GameDay from './components/GameDay';
 import Fees from './components/Fees';
 import InstallTip from './components/InstallTip';
+import ChompLogo from './components/ChompLogo';
 import { usePhoneTurn } from './components/usePhoneTurn';
 import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
 import { NEW_FEES, readFees, type FeesState } from './lib/fees';
@@ -68,7 +69,7 @@ export default function App() {
       <Backdrop />
 
       <header className="hero">
-        <img className="hero__logo" src="./logo.svg" alt="Dads Army" width={467} height={520} />
+        <ChompLogo />
         <ShinyText text="Team Picker" color="#d9e8c4" shineColor="#ffffff" speed={3} className="hero__sub" />
       </header>
 
