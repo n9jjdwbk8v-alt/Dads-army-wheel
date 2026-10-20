@@ -5,6 +5,9 @@ import headUrl from '../assets/chomp/head.svg';
 import stickUrl from '../assets/chomp/stick.svg';
 import jawUrl from '../assets/chomp/jaw.svg';
 import lettersUrl from '../assets/chomp/letters.svg';
+import outlineHeadUrl from '../assets/chomp/outline-head.svg';
+import outlineJawUrl from '../assets/chomp/outline-jaw.svg';
+import outlineStickUrl from '../assets/chomp/outline-stick.svg';
 import './ChompLogo.css';
 
 // The logo is 467 x 520 units; every layer below fills that box, so moves are given in those units.
@@ -104,9 +107,6 @@ const ChompLogo = () => {
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const rigRef = useRef<HTMLSpanElement>(null);
-  const headRef = useRef<HTMLSpanElement>(null);
-  const jawRef = useRef<HTMLSpanElement>(null);
-  const stickRef = useRef<HTMLSpanElement>(null);
   const notchRef = useRef<HTMLSpanElement>(null);
   const fxRef = useRef<HTMLSpanElement>(null);
 
@@ -131,22 +131,22 @@ const ChompLogo = () => {
   // Runs the animations once the effect layers for this run are in the page.
   useEffect(() => {
     if (!playing) return;
-    const head = headRef.current;
-    const jaw = jawRef.current;
-    const stick = stickRef.current;
     const notch = notchRef.current;
     const fx = fxRef.current;
     const rig = rigRef.current;
-    if (!head || !jaw || !stick || !notch || !fx || !rig || typeof head.animate !== 'function') {
+    if (!notch || !fx || !rig || typeof notch.animate !== 'function') {
       setPlaying(false);
       return;
     }
     const unit = rig.clientWidth / W;
     const chompAt = CHOMP * DURATION;
+    // The yellow outline and the pieces are two copies of the same rig, moved in step.
+    const move = (selector: string, frames: Keyframe[]) =>
+      [...rig.querySelectorAll<HTMLElement>(selector)].map(el => el.animate(frames, { duration: DURATION }));
     const anims: Animation[] = [
-      head.animate(HEAD, { duration: DURATION }),
-      jaw.animate(JAW, { duration: DURATION }),
-      stick.animate(STICK, { duration: DURATION }),
+      ...move('.chomp__head', HEAD),
+      ...move('.chomp__jaw', JAW),
+      ...move('.chomp__stick', STICK),
       notch.animate(
         [
           { opacity: 0 },
@@ -211,11 +211,22 @@ const ChompLogo = () => {
       <img className="chomp__still" src="./logo.svg" alt="" width={W} height={H} />
       <span className="chomp__rig" ref={rigRef} aria-hidden="true">
         <img className="chomp__layer" src={bgUrl} alt="" />
-        <span className="chomp__part chomp__head" ref={headRef}>
+        {/* The yellow outline sits behind every piece and moves with each one, so it always wraps the
+            whole figure and never splits where the pieces part. */}
+        <span className="chomp__part chomp__head">
+          <img className="chomp__layer" src={outlineHeadUrl} alt="" />
+          <span className="chomp__part chomp__jaw">
+            <span className="chomp__part chomp__stick">
+              <img className="chomp__layer" src={outlineStickUrl} alt="" />
+            </span>
+            <img className="chomp__layer" src={outlineJawUrl} alt="" />
+          </span>
+        </span>
+        <span className="chomp__part chomp__head">
           <img className="chomp__layer" src={darkUrl} alt="" />
           <img className="chomp__layer" src={headUrl} alt="" />
-          <span className="chomp__part chomp__jaw" ref={jawRef}>
-            <span className="chomp__part chomp__stick" ref={stickRef}>
+          <span className="chomp__part chomp__jaw">
+            <span className="chomp__part chomp__stick">
               <img className="chomp__layer" src={stickUrl} alt="" />
               <span className="chomp__notch" ref={notchRef}>
                 <svg viewBox="0 0 14 8">
