@@ -113,25 +113,34 @@ export default function Roster({ players, setPlayers, children }: RosterProps) {
                 fontSize={17}
                 className="roster__check"
               />
-              <ScrubField
-                label="Skill"
-                value={p.skill}
-                min={0}
-                max={10}
-                step={1}
-                size="sm"
-                onChange={v => update(p.id, { skill: v })}
-                accent="#c8e66b"
-                chipColor="rgba(255, 255, 255, 0.06)"
-                suffix=""
-              />
-              <button
-                className={arming === p.id ? 'icon-btn icon-btn--confirm' : 'icon-btn'}
-                onClick={() => remove(p)}
-                aria-label={arming === p.id ? `Tap again to remove ${p.name}` : `Remove ${p.name}`}
-              >
-                ×{arming === p.id && <span className="icon-btn__confirm">Remove</span>}
-              </button>
+              {arming === p.id ? (
+                // Tapped once: the skill box and × give way to a Remove button in the same space.
+                <button
+                  className="btn btn--danger roster__remove"
+                  onClick={() => remove(p)}
+                  aria-label={`Tap again to remove ${p.name}`}
+                >
+                  Remove
+                </button>
+              ) : (
+                <>
+                  <ScrubField
+                    label="Skill"
+                    value={p.skill}
+                    min={0}
+                    max={10}
+                    step={1}
+                    size="sm"
+                    onChange={v => update(p.id, { skill: v })}
+                    accent="#c8e66b"
+                    chipColor="rgba(255, 255, 255, 0.06)"
+                    suffix=""
+                  />
+                  <button className="icon-btn" onClick={() => remove(p)} aria-label={`Remove ${p.name}`}>
+                    ×
+                  </button>
+                </>
+              )}
             </li>
           ))}
         </ul>

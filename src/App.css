@@ -357,25 +357,18 @@
   color: var(--danger);
 }
 
-.icon-btn--confirm {
-  position: relative;
+/* Same width as the skill box, the gap and the × it stands in for. */
+.roster__remove {
+  flex: none;
+  width: calc(104px + 0.5rem + 36px);
+  min-height: 36px;
+  padding: 0 0.75rem;
 }
 
-/* Spreads left over the skill box so the row doesn't reflow on narrow phones. */
-.icon-btn__confirm {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  padding: 0 0.85rem;
-  border-radius: 10px;
-  background: var(--danger-bg);
-  color: #fff;
-  font-size: 0.9rem;
-  font-weight: 700;
-  white-space: nowrap;
+@container (max-width: 327px) {
+  .roster__remove {
+    width: calc(104px + 0.35rem + 36px);
+  }
 }
 
 .text-input {
