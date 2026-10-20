@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import bgUrl from '../assets/chomp/bg.svg';
 import darkUrl from '../assets/chomp/dark.svg';
+import behindStickUrl from '../assets/chomp/behind-stick.svg';
 import headUrl from '../assets/chomp/head.svg';
 import stickUrl from '../assets/chomp/stick.svg';
 import jawUrl from '../assets/chomp/jaw.svg';
 import lettersUrl from '../assets/chomp/letters.svg';
 import outlineHeadUrl from '../assets/chomp/outline-head.svg';
 import outlineJawUrl from '../assets/chomp/outline-jaw.svg';
+import outlineMouthUrl from '../assets/chomp/outline-mouth.svg';
 import outlineStickUrl from '../assets/chomp/outline-stick.svg';
 import './ChompLogo.css';
 
@@ -48,32 +50,23 @@ const HEAD = keyframes([
 ]);
 
 // The jaw hinges at the back, then slides side to side for the grind.
-const JAW = keyframes([
+const JAW_POSES: Pose[] = [
   { at: 0 },
   { at: 0.11, r: 3, dy: 5 },
   { at: 0.21, r: 7, dy: 10, easing: SLAM },
   { at: CHOMP, r: -1.5, dy: -2, easing: RECOIL },
   { at: 0.31 },
-  { at: 0.38, r: 1.5, dx: -5, dy: 3 },
-  { at: 0.48, r: 1.5, dx: 5, dy: 3 },
-  { at: 0.58, r: 1.5, dx: -5, dy: 3 },
+  { at: 0.38, r: 1.5, dx: -3, dy: 3 },
+  { at: 0.48, r: 1.5, dx: 3, dy: 3 },
+  { at: 0.58, r: 1.5, dx: -3, dy: 3 },
   { at: 0.66 },
   { at: 1 }
-]);
+];
+const JAW = keyframes(JAW_POSES);
 
-// The stick rides on the jaw; this only tips it about the mouth (relative to the jaw's own turn).
-const STICK = keyframes([
-  { at: 0 },
-  { at: 0.11, r: -1.5 },
-  { at: 0.21, r: -4, easing: SLAM },
-  { at: CHOMP, r: -0.5, easing: RECOIL },
-  { at: 0.31 },
-  { at: 0.38, r: -3.5 },
-  { at: 0.48, r: 0.5 },
-  { at: 0.58, r: -3.5 },
-  { at: 0.66 },
-  { at: 1 }
-]);
+// The dark inside of the mouth fills the gap as the jaw drops, and slides sideways with it in the grind.
+// The stick is held in the teeth, so it simply moves with the jaw.
+const MOUTH = keyframes(JAW_POSES.map(({ at, dx, easing }) => ({ at, dx, easing })));
 
 type Shard = { x: number; y: number; angle: number; dist: number; spin: number; size: number; delay: number };
 
@@ -146,7 +139,7 @@ const ChompLogo = () => {
     const anims: Animation[] = [
       ...move('.chomp__head', HEAD),
       ...move('.chomp__jaw', JAW),
-      ...move('.chomp__stick', STICK),
+      ...move('.chomp__mouth', MOUTH),
       notch.animate(
         [
           { opacity: 0 },
@@ -215,18 +208,24 @@ const ChompLogo = () => {
             whole figure and never splits where the pieces part. */}
         <span className="chomp__part chomp__head">
           <img className="chomp__layer" src={outlineHeadUrl} alt="" />
+          <span className="chomp__part chomp__mouth">
+            <img className="chomp__layer" src={outlineMouthUrl} alt="" />
+          </span>
           <span className="chomp__part chomp__jaw">
-            <span className="chomp__part chomp__stick">
+            <span className="chomp__stick">
               <img className="chomp__layer" src={outlineStickUrl} alt="" />
             </span>
             <img className="chomp__layer" src={outlineJawUrl} alt="" />
           </span>
         </span>
         <span className="chomp__part chomp__head">
-          <img className="chomp__layer" src={darkUrl} alt="" />
+          <img className="chomp__layer" src={behindStickUrl} alt="" />
+          <span className="chomp__part chomp__mouth">
+            <img className="chomp__layer" src={darkUrl} alt="" />
+          </span>
           <img className="chomp__layer" src={headUrl} alt="" />
           <span className="chomp__part chomp__jaw">
-            <span className="chomp__part chomp__stick">
+            <span className="chomp__stick">
               <img className="chomp__layer" src={stickUrl} alt="" />
               <span className="chomp__notch" ref={notchRef}>
                 <svg viewBox="0 0 14 8">

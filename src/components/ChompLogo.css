@@ -61,7 +61,7 @@
   will-change: transform;
 }
 
-/* Pivots: the neck for the head, the back of the jaw for the hinge, the middle of the mouth for the stick. */
+/* Pivots: the neck for the head, the back of the jaw for the hinge. The stick rides on the jaw. */
 .chomp__head {
   transform-origin: 50.32% 80.77%;
 }
@@ -71,7 +71,8 @@
 }
 
 .chomp__stick {
-  transform-origin: 51.39% 66.35%;
+  position: absolute;
+  inset: 0;
 }
 
 /* The bite mark left in the stick (231, 338 in logo units). */
