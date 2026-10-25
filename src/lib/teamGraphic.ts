@@ -338,9 +338,17 @@ export const drawTeamsThumbnail = async (teams: Teams, design: GraphicDesign, wi
 };
 
 const GIF_SCALE = 2 / 3;
-const GIF_FRAMES = 36;
-const FRAME_MS = 60;
+const ANIM_MS = 2160;
+/** 25 frames a second: smooth, and a delay GIF players (WhatsApp's included) all honour exactly. */
+const FRAME_MS = 40;
+const GIF_FRAMES = Math.round(ANIM_MS / FRAME_MS) + 1;
 const HOLD_MS = 3500;
+
+/** The logo's own colours, kept exact in the GIF so it doesn't come out dull or blotchy. */
+const LOGO_COLOURS: [number, number, number][] = [
+  '#598e2f', '#2a321f', '#253a2d', '#bdc6a2', '#deeadd', '#e4d841',
+  '#1e231a', '#496438', '#91a886', '#6e7d68', '#171a12'
+].map(h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]);
 
 /**
  * An animated design as a looping GIF. It opens on the finished picture (WhatsApp shows the first frame as the
@@ -365,9 +373,10 @@ export const makeTeamsGif = async (teams: Teams, design: GraphicDesign, date = n
     if (i % 6 === 5) await new Promise(r => setTimeout(r));
   }
 
-  // One shared palette, taken from the finished frame, keeps colours steady between frames. The last slot is
-  // kept free to mark "unchanged" pixels, so each frame after the first only stores what changed.
-  const palette = quantize(frames[0], 255);
+  // One shared palette, taken from the finished frame, keeps colours steady between frames. The logo's colours
+  // are added exactly, and the last slot is kept free to mark "unchanged" pixels, so each frame after the
+  // first only stores what changed.
+  const palette = [...quantize(frames[0], 255 - LOGO_COLOURS.length), ...LOGO_COLOURS];
   const unchanged = palette.length;
   palette.push([0, 0, 0]);
   const gif = GIFEncoder();
@@ -406,7 +415,7 @@ export const playTeamsAnimation = async (
   canvas.width = Math.round(W * GIF_SCALE);
   canvas.height = Math.round(H * GIF_SCALE);
   const ctx = canvas.getContext('2d')!;
-  const length = GIF_FRAMES * FRAME_MS;
+  const length = ANIM_MS;
   let raf = 0;
   let timer = 0;
   let start = 0;

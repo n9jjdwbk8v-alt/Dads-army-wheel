@@ -1,7 +1,7 @@
 // Dads Army offline support: the app opens with no signal (e.g. at the rink) from what it last downloaded.
 // Pages load fresh when online so updates arrive straight away; the hashed build files and fonts come from the
 // cache.
-const CACHE = 'dads-army-v6';
+const CACHE = 'dads-army-v7';
 const SHELL = ['./', './logo.svg', './manifest.webmanifest', './icon-192.png', './apple-touch-icon.png', './favicon-48.png'];
 
 self.addEventListener('install', event => {
