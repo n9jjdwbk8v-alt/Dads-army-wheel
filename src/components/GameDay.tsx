@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import SpringCheck from './reactbits/SpringCheck';
 import ScoreSection from './ScoreSection';
 import { useRendered } from './useRendered';
@@ -100,6 +100,16 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay, matc
   );
   // Set once this game day's squad has been saved for scoring by sending or saving its sheet.
   const [savedKey, setSavedKey] = useState('');
+  // Switching section keeps the switch on screen, so the new section starts where you're looking.
+  const switchRef = useRef<HTMLDivElement>(null);
+  const showSection = (next: Section) => {
+    setSection(next);
+    const el = switchRef.current;
+    if (el && el.getBoundingClientRect().top < 0) {
+      const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({ block: 'start', behavior: still ? 'auto' : 'smooth' });
+    }
+  };
 
   const set = (patch: Partial<GameDayState>) => setGameDay(g => ({ ...g, ...patch }));
   const available = new Set(gameDay.available);
@@ -166,7 +176,7 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay, matc
             {goalies.length === 1 ? '' : 's'}
           </span>
         </span>
-        <button className="btn btn--ghost" onClick={() => setSection('score')}>
+        <button className="btn btn--ghost" onClick={() => showSection('score')}>
           Score
         </button>
       </div>
@@ -174,203 +184,222 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay, matc
 
   return (
     <section className="gameday">
-      <div className="segment segment--sections" role="tablist" aria-label="Game day">
+      <div
+        ref={switchRef}
+        className="segment segment--sections"
+        role="tablist"
+        aria-label="Game day"
+        style={{ '--i': SECTIONS.findIndex(s => s.value === section), '--n': SECTIONS.length } as CSSProperties}
+      >
         {SECTIONS.map(s => (
           <button
             key={s.value}
             role="tab"
             aria-selected={section === s.value}
             className={section === s.value ? 'segment__on' : ''}
-            onClick={() => setSection(s.value)}
+            onClick={() => showSection(s.value)}
           >
             {s.label}
           </button>
         ))}
       </div>
 
-      {section === 'squad' && (
-        <>
-          <div className="panel gameday__details">
-            <div className="stamps" role="radiogroup" aria-label="Game or scrimmage">
-              {KINDS.map(k => (
+      <div key={section} className="gameday__body">
+        {section === 'squad' && (
+          <>
+            <div className="panel gameday__details">
+              <div className="stamps" role="radiogroup" aria-label="Game or scrimmage">
+                {KINDS.map(k => (
+                  <button
+                    key={k.value}
+                    role="radio"
+                    aria-checked={gameDay.kind === k.value}
+                    className={gameDay.kind === k.value ? 'stamp stamp--on' : 'stamp'}
+                    onClick={() => set({ kind: k.value })}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+              <label className="field">
+                <span>{gameDay.kind === 'game' ? 'Opponent' : 'Name'}</span>
+                <input
+                  className="text-input"
+                  value={gameDay.opponent}
+                  onChange={e => set({ opponent: e.target.value })}
+                  placeholder={gameDay.kind === 'game' ? 'e.g. Ice Wolves' : 'e.g. Scrimmage Two'}
+                  maxLength={40}
+                />
+              </label>
+              <div className="field-row">
+                <label className="field">
+                  <span>Date</span>
+                  <input
+                    className="text-input"
+                    type="date"
+                    value={gameDay.date}
+                    onChange={e => set({ date: e.target.value })}
+                  />
+                </label>
+                <label className="field">
+                  <span>Face-off</span>
+                  <input
+                    className="text-input"
+                    type="time"
+                    value={gameDay.time}
+                    onChange={e => set({ time: e.target.value })}
+                  />
+                </label>
+              </div>
+              <label className="field">
+                <span>Rink</span>
+                <input
+                  className="text-input"
+                  value={gameDay.venue}
+                  onChange={e => set({ venue: e.target.value })}
+                  placeholder="e.g. Planet Ice"
+                  maxLength={40}
+                />
+              </label>
+            </div>
+
+            <div className="panel">
+              <div className="roster-bar">
+                <p className="roster-count">
+                  <strong>{squad.length}</strong> available · {count('F')} F · {count('D')} D · {count('G')} G
+                </p>
+                <div className="roster-actions">
+                  <button className="btn btn--ghost" onClick={() => set({ available: players.map(p => p.id) })}>
+                    Tick all
+                  </button>
+                  <button className="btn btn--ghost" onClick={() => set({ available: [] })}>
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <p className="muted small">
+                Tick who's available and set each player's position. Goalies are the players rated 0.
+              </p>
+              {players.length === 0 ? (
+                <p className="empty">Add players on the Roster tab first.</p>
+              ) : (
+                <ul className="roster">
+                  {sorted.map(p => {
+                    const pos = positionOf(p);
+                    return (
+                      <li key={p.id} className={available.has(p.id) ? 'roster__row' : 'roster__row roster__row--away'}>
+                        <SpringCheck
+                          label={p.name}
+                          checked={available.has(p.id)}
+                          onChange={on => toggle(p.id, on)}
+                          strike="none"
+                          doneOpacity={1}
+                          color="#e6f0d6"
+                          fillColor="#9cc23f"
+                          checkColor="#12180d"
+                          boxSize={22}
+                          fontSize={17}
+                          className="roster__check"
+                        />
+                        <div className="pos-picker" role="radiogroup" aria-label={`${p.name}'s position`}>
+                          {POSITIONS.map(o => (
+                            <button
+                              key={o.value}
+                              role="radio"
+                              aria-checked={pos === o.value}
+                              title={o.title}
+                              className={pos === o.value ? 'pos pos--on' : 'pos'}
+                              onClick={() => setPosition(p.id, o.value)}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {squad.length > 0 && (
+                <button className="btn btn--primary btn--whatsapp gameday__next" onClick={() => showSection('sheet')}>
+                  Next: {view === 'sheet' ? sheetTitle(gameDay.kind).join(' ').toLowerCase() : 'lines'}
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {section === 'sheet' && !squad.length && (
+          <div className="panel">
+            <p className="empty">Tick who's available in Squad first.</p>
+          </div>
+        )}
+        {section === 'sheet' && squad.length > 0 && savedNote}
+        {section !== 'sheet' || !squad.length ? null : view === 'sheet' ? (
+          <SharePanel
+            header={switcher}
+            drawKey={JSON.stringify(['squad', skaters, goalies, ...detailsKey])}
+            draw={() => drawSquadSheet(details, skaters, goalies)}
+            text={() => squadText(skaters, goalies, details)}
+            fileName="dads-army-team-sheet.png"
+            onShared={shared}
+            alt={`${sheetTitle(gameDay.kind).join(' ')} for ${squad.length} players`}
+          >
+            <p className="gameday__summary">
+              {skaters.length} skater{skaters.length === 1 ? '' : 's'} ·{' '}
+              {goalies.length ? `${goalies.length} netminder${goalies.length === 1 ? '' : 's'}` : 'no netminder yet'}
+            </p>
+          </SharePanel>
+        ) : (
+          <SharePanel
+            header={switcher}
+            drawKey={JSON.stringify(['lines', lineup, ...detailsKey])}
+            draw={() => drawLinesSheet(details, lineup)}
+            text={() => linesText(lineup, details)}
+            fileName="dads-army-lines.png"
+            onShared={shared}
+            alt={`Lines for ${squad.length} players`}
+          >
+            <p className="graphic__label">Line style</p>
+            <div className="chips" role="radiogroup" aria-label="Line style">
+              {LINE_STYLES.map(s => (
                 <button
-                  key={k.value}
+                  key={s.value}
                   role="radio"
-                  aria-checked={gameDay.kind === k.value}
-                  className={gameDay.kind === k.value ? 'stamp stamp--on' : 'stamp'}
-                  onClick={() => set({ kind: k.value })}
+                  aria-checked={gameDay.style === s.value}
+                  className={gameDay.style === s.value ? 'chip chip--on' : 'chip'}
+                  onClick={() => set({ style: s.value, manual: undefined })}
                 >
-                  {k.label}
+                  {s.label}
                 </button>
               ))}
             </div>
-            <label className="field">
-              <span>{gameDay.kind === 'game' ? 'Opponent' : 'Name'}</span>
-              <input
-                className="text-input"
-                value={gameDay.opponent}
-                onChange={e => set({ opponent: e.target.value })}
-                placeholder={gameDay.kind === 'game' ? 'e.g. Ice Wolves' : 'e.g. Scrimmage Two'}
-                maxLength={40}
-              />
-            </label>
-            <div className="field-row">
-              <label className="field">
-                <span>Date</span>
-                <input
-                  className="text-input"
-                  type="date"
-                  value={gameDay.date}
-                  onChange={e => set({ date: e.target.value })}
-                />
-              </label>
-              <label className="field">
-                <span>Face-off</span>
-                <input
-                  className="text-input"
-                  type="time"
-                  value={gameDay.time}
-                  onChange={e => set({ time: e.target.value })}
-                />
-              </label>
-            </div>
-            <label className="field">
-              <span>Rink</span>
-              <input
-                className="text-input"
-                value={gameDay.venue}
-                onChange={e => set({ venue: e.target.value })}
-                placeholder="e.g. Planet Ice"
-                maxLength={40}
-              />
-            </label>
-          </div>
-
-          <div className="panel">
-            <div className="roster-bar">
-              <p className="roster-count">
-                <strong>{squad.length}</strong> available · {count('F')} F · {count('D')} D · {count('G')} G
-              </p>
-              <div className="roster-actions">
-                <button className="btn btn--ghost" onClick={() => set({ available: players.map(p => p.id) })}>
-                  Tick all
-                </button>
-                <button className="btn btn--ghost" onClick={() => set({ available: [] })}>
-                  Clear
-                </button>
-              </div>
-            </div>
-            <p className="muted small">
-              Tick who's available and set each player's position. Goalies are the players rated 0.
+            <p className="muted small">{LINE_STYLES.find(s => s.value === gameDay.style)?.hint}</p>
+            <p className="gameday__summary">
+              {lineup.forwards.length} line{lineup.forwards.length === 1 ? '' : 's'} · {lineup.defence.length} D pair
+              {lineup.defence.length === 1 ? '' : 's'} ·{' '}
+              {lineup.goalies.some(Boolean) ? `${lineup.goalies.filter(Boolean).length} G` : 'no goalie'}
+              {lineup.spares.length ? ` · ${lineup.spares.length} spare${lineup.spares.length === 1 ? '' : 's'}` : ''}
             </p>
-            {players.length === 0 ? (
-              <p className="empty">Add players on the Roster tab first.</p>
-            ) : (
-              <ul className="roster">
-                {sorted.map(p => {
-                  const pos = positionOf(p);
-                  return (
-                    <li key={p.id} className={available.has(p.id) ? 'roster__row' : 'roster__row roster__row--away'}>
-                      <SpringCheck
-                        label={p.name}
-                        checked={available.has(p.id)}
-                        onChange={on => toggle(p.id, on)}
-                        strike="none"
-                        doneOpacity={1}
-                        color="#e6f0d6"
-                        fillColor="#9cc23f"
-                        checkColor="#12180d"
-                        boxSize={22}
-                        fontSize={17}
-                        className="roster__check"
-                      />
-                      <div className="pos-picker" role="radiogroup" aria-label={`${p.name}'s position`}>
-                        {POSITIONS.map(o => (
-                          <button
-                            key={o.value}
-                            role="radio"
-                            aria-checked={pos === o.value}
-                            title={o.title}
-                            className={pos === o.value ? 'pos pos--on' : 'pos'}
-                            onClick={() => setPosition(p.id, o.value)}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            {squad.length > 0 && (
-              <button className="btn btn--primary btn--whatsapp gameday__next" onClick={() => setSection('sheet')}>
-                Next: {view === 'sheet' ? sheetTitle(gameDay.kind).join(' ').toLowerCase() : 'lines'}
-              </button>
-            )}
-          </div>
-        </>
-      )}
+            <LineEditor
+              lineup={lineup}
+              edited={edited}
+              onChange={saveSlots}
+              onReset={() => set({ manual: undefined })}
+            />
+          </SharePanel>
+        )}
 
-      {section === 'sheet' && !squad.length && (
-        <div className="panel">
-          <p className="empty">Tick who's available in Squad first.</p>
-        </div>
-      )}
-      {section === 'sheet' && squad.length > 0 && savedNote}
-      {section !== 'sheet' || !squad.length ? null : view === 'sheet' ? (
-        <SharePanel
-          header={switcher}
-          drawKey={JSON.stringify(['squad', skaters, goalies, ...detailsKey])}
-          draw={() => drawSquadSheet(details, skaters, goalies)}
-          text={() => squadText(skaters, goalies, details)}
-          fileName="dads-army-team-sheet.png"
-          onShared={shared}
-          alt={`${sheetTitle(gameDay.kind).join(' ')} for ${squad.length} players`}
-        >
-          <p className="gameday__summary">
-            {skaters.length} skater{skaters.length === 1 ? '' : 's'} ·{' '}
-            {goalies.length ? `${goalies.length} netminder${goalies.length === 1 ? '' : 's'}` : 'no netminder yet'}
-          </p>
-        </SharePanel>
-      ) : (
-        <SharePanel
-          header={switcher}
-          drawKey={JSON.stringify(['lines', lineup, ...detailsKey])}
-          draw={() => drawLinesSheet(details, lineup)}
-          text={() => linesText(lineup, details)}
-          fileName="dads-army-lines.png"
-          onShared={shared}
-          alt={`Lines for ${squad.length} players`}
-        >
-          <p className="graphic__label">Line style</p>
-          <div className="chips" role="radiogroup" aria-label="Line style">
-            {LINE_STYLES.map(s => (
-              <button
-                key={s.value}
-                role="radio"
-                aria-checked={gameDay.style === s.value}
-                className={gameDay.style === s.value ? 'chip chip--on' : 'chip'}
-                onClick={() => set({ style: s.value, manual: undefined })}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <p className="muted small">{LINE_STYLES.find(s => s.value === gameDay.style)?.hint}</p>
-          <p className="gameday__summary">
-            {lineup.forwards.length} line{lineup.forwards.length === 1 ? '' : 's'} · {lineup.defence.length} D pair
-            {lineup.defence.length === 1 ? '' : 's'} ·{' '}
-            {lineup.goalies.some(Boolean) ? `${lineup.goalies.filter(Boolean).length} G` : 'no goalie'}
-            {lineup.spares.length ? ` · ${lineup.spares.length} spare${lineup.spares.length === 1 ? '' : 's'}` : ''}
-          </p>
-          <LineEditor lineup={lineup} edited={edited} onChange={saveSlots} onReset={() => set({ manual: undefined })} />
-        </SharePanel>
-      )}
-
-      {section === 'score' && (
-        <ScoreSection matches={matches} setMatches={setMatches} details={details} available={squad} roster={players} />
-      )}
+        {section === 'score' && (
+          <ScoreSection
+            matches={matches}
+            setMatches={setMatches}
+            details={details}
+            available={squad}
+            roster={players}
+          />
+        )}
+      </div>
     </section>
   );
 }
@@ -514,8 +543,10 @@ function SharePanel({ header, drawKey, draw, text, fileName, alt, onShared, chil
     <div className="panel graphic">
       {header}
       {children}
-      {picture && (
+      {picture ? (
         <img src={picture.url} alt={alt} className={current ? 'graphic__img' : 'graphic__img graphic__img--updating'} />
+      ) : (
+        <div className="graphic__img graphic__img--waiting" aria-hidden="true" />
       )}
       <button
         className="btn btn--primary btn--whatsapp"

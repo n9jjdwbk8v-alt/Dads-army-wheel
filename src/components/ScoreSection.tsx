@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { useConfirmTap } from './useConfirmTap';
 import { useRendered } from './useRendered';
 import {
@@ -43,6 +43,8 @@ const shortDate = (date: string) =>
     ? new Date(`${date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
     : '';
 
+const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
 const nameHas = (name: string, query: string) => name.toLowerCase().includes(query.trim().toLowerCase());
 
 /** Game day's Score section: pick a game whose squad was saved from its team sheet, then score it live. */
@@ -53,9 +55,27 @@ export default function ScoreSection({ matches: all, setMatches, details, availa
   const match = all.find(m => m.id === pickedId) ?? null;
   const top = useRef<HTMLDivElement>(null);
 
-  // Each step starts at the top of the section, so the form is in view on a phone.
-  useEffect(() => {
-    top.current?.scrollIntoView({ block: 'nearest' });
+  // Where the live score was scrolled to, so coming back from a form lands in the same place.
+  const liveScroll = useRef<number | null>(null);
+  const go = (next: View) => {
+    if (view === 'live' && next !== 'live') liveScroll.current = window.scrollY;
+    setView(next);
+  };
+
+  // Back on the live score: return to where you were. Opening a form: bring its top into view only if it's off
+  // the top of the screen or low down, so taps near the top don't move the page at all.
+  useLayoutEffect(() => {
+    if (view === 'live' && liveScroll.current !== null) {
+      window.scrollTo({ top: liveScroll.current });
+      liveScroll.current = null;
+      return;
+    }
+    const el = top.current;
+    if (!el) return;
+    const y = el.getBoundingClientRect().top;
+    if (y < 0 || y > window.innerHeight * 0.5) {
+      el.scrollIntoView({ block: 'start', behavior: reduceMotion() ? 'auto' : 'smooth' });
+    }
   }, [view, pickedId]);
 
   const open = (id: string) => {
@@ -87,79 +107,79 @@ export default function ScoreSection({ matches: all, setMatches, details, availa
   }
 
   const change = (update: (m: Match) => Match) => setMatches(ms => updateMatch(ms, match.id, update));
-  const back = () => setView('live');
+  const back = () => go('live');
 
   return (
     <div ref={top} className="score">
-      {view === 'live' && (
-        <Live match={match} onChange={change} onView={setView} onAllGames={() => setPickedId(null)} />
-      )}
-      {view === 'goal' && (
-        <GoalForm
-          match={match}
-          onCancel={back}
-          onSave={(scorer, assists, time) => {
-            change(m => addGoal(m, { side: 'us', scorer, assists, ...(time ? { time } : {}) }));
-            back();
-          }}
-          onSquad={() => setView('squad')}
-        />
-      )}
-      {view === 'their' && (
-        <TheirGoalForm
-          match={match}
-          onCancel={back}
-          onSave={(number, time) => {
-            change(m =>
-              addGoal(m, { side: 'them', assists: [], ...(number ? { number } : {}), ...(time ? { time } : {}) })
-            );
-            back();
-          }}
-        />
-      )}
-      {view === 'penalty' && (
-        <PenaltyForm
-          match={match}
-          onCancel={back}
-          onSave={penalty => {
-            change(m => addPenalty(m, penalty));
-            back();
-          }}
-        />
-      )}
-      {view === 'squad' && <SquadEditor match={match} onChange={change} onAdd={() => setView('add')} onDone={back} />}
-      {view === 'add' && (
-        <AddPlayers
-          match={match}
-          roster={roster}
-          onCancel={() => setView('squad')}
-          onAdd={people => {
-            change(m => ({ ...m, squad: [...m.squad, ...people] }));
-            setView('squad');
-          }}
-        />
-      )}
-      {view === 'period' && (
-        <PeriodEnd
-          match={match}
-          onBack={back}
-          onNext={() => {
-            change(m => ({ ...m, period: Math.min(4, m.period + 1) as Period }));
-            back();
-          }}
-        />
-      )}
-      {view === 'final' && (
-        <FullTime
-          match={match}
-          onChange={change}
-          onBack={back}
-          onFinish={() => {
-            change(m => ({ ...m, finished: true }));
-            back();
-          }}
-        />
-      )}
+      <div key={view} className="score__view">
+        {view === 'live' && <Live match={match} onChange={change} onView={go} onAllGames={() => setPickedId(null)} />}
+        {view === 'goal' && (
+          <GoalForm
+            match={match}
+            onCancel={back}
+            onSave={(scorer, assists, time) => {
+              change(m => addGoal(m, { side: 'us', scorer, assists, ...(time ? { time } : {}) }));
+              back();
+            }}
+            onSquad={() => go('squad')}
+          />
+        )}
+        {view === 'their' && (
+          <TheirGoalForm
+            match={match}
+            onCancel={back}
+            onSave={(number, time) => {
+              change(m =>
+                addGoal(m, { side: 'them', assists: [], ...(number ? { number } : {}), ...(time ? { time } : {}) })
+              );
+              back();
+            }}
+          />
+        )}
+        {view === 'penalty' && (
+          <PenaltyForm
+            match={match}
+            onCancel={back}
+            onSave={penalty => {
+              change(m => addPenalty(m, penalty));
+              back();
+            }}
+          />
+        )}
+        {view === 'squad' && <SquadEditor match={match} onChange={change} onAdd={() => go('add')} onDone={back} />}
+        {view === 'add' && (
+          <AddPlayers
+            match={match}
+            roster={roster}
+            onCancel={() => go('squad')}
+            onAdd={people => {
+              change(m => ({ ...m, squad: [...m.squad, ...people] }));
+              go('squad');
+            }}
+          />
+        )}
+        {view === 'period' && (
+          <PeriodEnd
+            match={match}
+            onBack={back}
+            onNext={() => {
+              change(m => ({ ...m, period: Math.min(4, m.period + 1) as Period }));
+              back();
+            }}
+          />
+        )}
+        {view === 'final' && (
+          <FullTime
+            match={match}
+            onChange={change}
+            onBack={back}
+            onFinish={() => {
+              change(m => ({ ...m, finished: true }));
+              back();
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -246,6 +266,9 @@ type LiveProps = {
 };
 
 function Live({ match, onChange, onView, onAllGames }: LiveProps) {
+  // Anything added in the moments before this screen appeared (just saved) gets a brief highlight.
+  const [shownAt] = useState(() => Date.now());
+  const fresh = (at: number) => (shownAt - at < 4000 ? ' log__row--new' : '');
   const [armed, confirmTap] = useConfirmTap();
   const { us, them } = score(match);
   const theirs = theirName(match.details);
@@ -283,14 +306,18 @@ function Live({ match, onChange, onView, onAllGames }: LiveProps) {
         <div className="scoreboard" aria-live="polite">
           <div className="scoreboard__side">
             <span className="scoreboard__name scoreboard__name--us">Dads Army</span>
-            <span className="scoreboard__num">{us}</span>
+            <span key={us} className="scoreboard__num">
+              {us}
+            </span>
           </div>
           <span className="scoreboard__dash" aria-hidden="true">
             –
           </span>
           <div className="scoreboard__side">
             <span className="scoreboard__name">{theirs}</span>
-            <span className="scoreboard__num scoreboard__num--them">{them}</span>
+            <span key={them} className="scoreboard__num scoreboard__num--them">
+              {them}
+            </span>
           </div>
         </div>
         <div className="period-pick" role="radiogroup" aria-label="Period">
@@ -335,7 +362,7 @@ function Live({ match, onChange, onView, onAllGames }: LiveProps) {
           <ul className="log">
             {events.map(e =>
               e.kind === 'goal' ? (
-                <li key={e.g.id} className={e.g.side === 'us' ? 'log__row log__row--us' : 'log__row'}>
+                <li key={e.g.id} className={`log__row${e.g.side === 'us' ? ' log__row--us' : ''}${fresh(e.at)}`}>
                   <span className="log__period">{nameOf(e.g.period).label}</span>
                   <span className="log__text">
                     <strong>
@@ -351,7 +378,7 @@ function Live({ match, onChange, onView, onAllGames }: LiveProps) {
                   <span className="log__score">{after.get(e.g.id)}</span>
                 </li>
               ) : (
-                <li key={e.p.id} className={e.p.side === 'us' ? 'log__row log__row--us' : 'log__row'}>
+                <li key={e.p.id} className={`log__row${e.p.side === 'us' ? ' log__row--us' : ''}${fresh(e.at)}`}>
                   <span className="log__period">{nameOf(e.p.period).label}</span>
                   <span className="log__text">
                     <strong>
@@ -573,7 +600,12 @@ function PenaltyForm({ match, onCancel, onSave }: PenaltyFormProps) {
   return (
     <div className="panel form">
       <FormHead kicker={period.long} title="Penalty" onCancel={onCancel} />
-      <div className="segment" role="radiogroup" aria-label="Team">
+      <div
+        className="segment"
+        role="radiogroup"
+        aria-label="Team"
+        style={{ '--i': side === 'us' ? 0 : 1, '--n': 2 } as CSSProperties}
+      >
         {(['us', 'them'] as const).map(s => (
           <button
             key={s}
@@ -794,8 +826,10 @@ function SheetShare({ match, stage, label }: { match: Match; stage: Period | 'fi
   const file = () => ready && new File([ready.blob], `dads-army-score-${stage}.png`, { type: 'image/png' });
   return (
     <>
-      {picture && (
+      {picture ? (
         <img src={picture.url} alt={label} className={ready ? 'graphic__img' : 'graphic__img graphic__img--updating'} />
+      ) : (
+        <div className="graphic__img graphic__img--waiting" aria-hidden="true" />
       )}
       <button
         className="btn btn--primary btn--whatsapp"
