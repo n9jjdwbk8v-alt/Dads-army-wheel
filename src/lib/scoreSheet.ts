@@ -40,7 +40,7 @@ export type ScoreSheet = {
   /** Our netminders and the saves each made. */
   netminders: { name: string; saves: number }[];
   /** Picked at full time. */
-  star?: string;
+  playerOfMatch?: string;
 };
 
 const PERIOD_NAMES = ['1ST', '2ND', '3RD', 'OT'];
@@ -115,7 +115,8 @@ export const drawScoreSheet = async (sheet: ScoreSheet): Promise<Blob> => {
   const shown = goals.filter(g => g.period <= last);
   const us = shown.filter(g => g.side === 'us').length;
   const them = shown.length - us;
-  const opponent = details.opponent.trim().toUpperCase() || 'OPPOSITION';
+  // A scrimmage's "opponent" field holds the event's name, so the other side is just the opposition.
+  const opponent = (details.kind === 'game' && details.opponent.trim().toUpperCase()) || 'OPPOSITION';
 
   // Title, as on the team sheet: FINAL SCORE, or e.g. 1ST PERIOD.
   const [big, small] = stage === 'final' ? ['FINAL', 'SCORE'] : [PERIOD_NAMES[stage - 1], 'PERIOD'];
@@ -157,34 +158,18 @@ export const drawScoreSheet = async (sheet: ScoreSheet): Promise<Blob> => {
   ctx.font = `90px ${TITLE}`;
   ctx.fillText('-', LIST_X, 505);
 
-  // Period by period, e.g. 1ST 2-1   2ND 1-0.
+  // Every goal so far, in order, down the left. The sheet is the same all game; only its title changes.
   ctx.textBaseline = 'middle';
   ctx.letterSpacing = '1px';
-  const periods = PERIOD_NAMES.slice(0, last).map((name, i) => {
-    const inPeriod = shown.filter(g => g.period === i + 1);
-    const mine = inPeriod.filter(g => g.side === 'us').length;
-    return `${name} ${mine}-${inPeriod.length - mine}`;
-  });
-  ctx.fillStyle = STONE;
-  ctx.font = `28px ${BLOCK}`;
-  ctx.fillText(periods.join('     '), LIST_X, 590);
-
-  // Goals, period by period, down the left.
-  const lines: ({ heading: string } | Goal)[] = [];
-  for (let p = 1; p <= last; p++) {
-    const inPeriod = shown.filter(g => g.period === p);
-    if (!inPeriod.length) continue;
-    lines.push({ heading: p === 4 ? 'OVERTIME' : `${PERIOD_NAMES[p - 1]} PERIOD` });
-    lines.push(...inPeriod);
-  }
-  const listTop = 660;
-  const listBottom = stage === 'final' && sheet.star ? 1080 : 1150;
+  const lines: ({ heading: string } | Goal)[] = [{ heading: 'GOALS' }, ...shown];
+  const listTop = 610;
+  const listBottom = stage === 'final' && sheet.playerOfMatch ? 1080 : 1150;
   const gap = lines.length > 1 ? Math.min(44, (listBottom - listTop) / (lines.length - 1)) : 44;
   const size = Math.round(Math.min(34, gap * 0.82));
-  if (!lines.length) {
+  if (!shown.length) {
     ctx.fillStyle = DIM;
     ctx.font = `${size}px ${BLOCK}`;
-    ctx.fillText('NO GOALS YET', LIST_X, listTop + 40);
+    ctx.fillText('NO GOALS YET', LIST_X, listTop + gap);
   }
   lines.forEach((line, i) => {
     const y = listTop + i * gap;
@@ -282,16 +267,16 @@ export const drawScoreSheet = async (sheet: ScoreSheet): Promise<Blob> => {
     ctx.drawImage(logo, SIDE_X + 10 - w / 2, y + 10, w, logoH);
   }
 
-  // Star of the night at full time, then the five stars as on the team sheet.
-  if (stage === 'final' && sheet.star) {
+  // Player of the match at full time, then the five stars as on the team sheet.
+  if (stage === 'final' && sheet.playerOfMatch) {
     ctx.fillStyle = GREEN;
     ctx.letterSpacing = '3px';
     ctx.font = `26px ${TITLE}`;
-    ctx.fillText('STAR OF THE NIGHT', LIST_X, 1118);
+    ctx.fillText('PLAYER OF THE MATCH', LIST_X, 1118);
     ctx.letterSpacing = '1px';
     ctx.fillStyle = OFF_WHITE;
     ctx.font = `38px ${BLOCK}`;
-    ctx.fillText(fit(ctx, sheet.star.toUpperCase(), 520), LIST_X, 1160);
+    ctx.fillText(fit(ctx, sheet.playerOfMatch.toUpperCase(), 520), LIST_X, 1160);
   }
   ctx.fillStyle = OFF_WHITE;
   for (let i = 0; i < 5; i++) star(ctx, LIST_X - 96 + i * 48, 1220, 22);
