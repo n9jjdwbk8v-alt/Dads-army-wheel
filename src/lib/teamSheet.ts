@@ -55,17 +55,17 @@ const surname = (name: string) => {
 
 export const bySurname = (a: Player, b: Player) => surname(a.name).localeCompare(surname(b.name));
 
-const W = 1080;
-const H = 1350;
-const PANEL = { x: 58, y: 66, w: W - 116, h: 1244 };
-const LIST_X = 362;
-const LIST_TOP = 318;
-const SIDE_X = 798;
+export const W = 1080;
+export const H = 1350;
+export const PANEL = { x: 58, y: 66, w: W - 116, h: 1244 };
+export const LIST_X = 362;
+export const LIST_TOP = 318;
+export const SIDE_X = 798;
 
-const GREEN = '#5c8f3c';
-const TITLE = '"Black Ops One", "Barlow Condensed", sans-serif';
-const SERIF_STENCIL = '"Stardos Stencil", Georgia, serif';
-const BLOCK = 'Anton, Impact, "Arial Narrow", sans-serif';
+export const GREEN = '#5c8f3c';
+export const TITLE = '"Black Ops One", "Barlow Condensed", sans-serif';
+export const SERIF_STENCIL = '"Stardos Stencil", Georgia, serif';
+export const BLOCK = 'Anton, Impact, "Arial Narrow", sans-serif';
 
 const SCRIMMAGE_NOTE = [
   'NOTE: THIS IS A SCRIMMAGE. IT CANNOT AND SHOULD NOT BE REFERRED TO AS A GAME UNDER ANY',
@@ -75,7 +75,7 @@ const SCRIMMAGE_NOTE = [
 
 // ---------- Decorations ----------
 
-const chevrons = (ctx: CanvasRenderingContext2D, x: number, y: number, dir: 1 | -1) => {
+export const chevrons = (ctx: CanvasRenderingContext2D, x: number, y: number, dir: 1 | -1) => {
   ctx.strokeStyle = '#f4f4f0';
   ctx.lineWidth = 16;
   ctx.lineJoin = 'miter';
@@ -89,7 +89,7 @@ const chevrons = (ctx: CanvasRenderingContext2D, x: number, y: number, dir: 1 | 
   }
 };
 
-const slashes = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, count: number) => {
+export const slashes = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: number, y2: number, count: number) => {
   ctx.strokeStyle = '#0c0d0a';
   ctx.lineWidth = 7;
   ctx.lineCap = 'round';
@@ -101,7 +101,7 @@ const slashes = (ctx: CanvasRenderingContext2D, x1: number, y1: number, x2: numb
   }
 };
 
-const bulletHole = (ctx: CanvasRenderingContext2D, rand: () => number, x: number, y: number, r: number) => {
+export const bulletHole = (ctx: CanvasRenderingContext2D, rand: () => number, x: number, y: number, r: number) => {
   ctx.fillStyle = '#0c0d0a';
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2 + rand() * 0.3;
@@ -129,7 +129,7 @@ const bulletHole = (ctx: CanvasRenderingContext2D, rand: () => number, x: number
   ctx.fill();
 };
 
-const puck = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
+export const puck = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-0.25);
@@ -150,7 +150,7 @@ const puck = (ctx: CanvasRenderingContext2D, x: number, y: number) => {
 };
 
 /** A strip of white tape with ragged top and bottom edges, slightly askew. */
-const tornLabel = (ctx: CanvasRenderingContext2D, rand: () => number, cx: number, cy: number, text: string) => {
+export const tornLabel = (ctx: CanvasRenderingContext2D, rand: () => number, cx: number, cy: number, text: string) => {
   const w = 360;
   const h = 76;
   ctx.save();
@@ -179,7 +179,7 @@ const tornLabel = (ctx: CanvasRenderingContext2D, rand: () => number, cx: number
   ctx.restore();
 };
 
-const star = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
+export const star = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) => {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
     const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
@@ -192,6 +192,36 @@ const star = (ctx: CanvasRenderingContext2D, x: number, y: number, r: number) =>
 };
 
 // ---------- The sheet ----------
+
+/** The sheet's background: camo border, the olive panel and its decorations. Returns the random source it used. */
+export const drawFrame = (ctx: CanvasRenderingContext2D) => {
+  const rand = mulberry32(2215);
+
+  // Grey-green camo all round, with the dark olive panel on top.
+  const tile = camoTile('stone');
+  for (let y = 0; y < H; y += 240) for (let x = 0; x < W; x += 240) ctx.drawImage(tile, x, y, 240, 240);
+  ctx.fillStyle = '#27311e';
+  ctx.fillRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h);
+  // Grunge: dark and light flecks across the panel.
+  for (let i = 0; i < 2600; i++) {
+    const x = PANEL.x + rand() * PANEL.w;
+    const y = PANEL.y + rand() * PANEL.h;
+    ctx.fillStyle = rand() < 0.6 ? 'rgba(10, 12, 8, 0.35)' : 'rgba(120, 135, 100, 0.12)';
+    ctx.fillRect(x, y, 1 + rand() * 3, 1 + rand() * 3);
+  }
+
+  chevrons(ctx, 14, 96, 1);
+  chevrons(ctx, W - 22, H - 70, -1);
+  slashes(ctx, 0, 520, 190, 250, 3);
+  slashes(ctx, 0, 300, 120, 140, 2);
+  slashes(ctx, W, 1150, W - 220, 1340, 3);
+  bulletHole(ctx, rand, W - 54, 88, 40);
+  bulletHole(ctx, rand, 952, 332, 34);
+  bulletHole(ctx, rand, 26, 604, 32);
+  bulletHole(ctx, rand, 118, 806, 30);
+  puck(ctx, 60, 1260);
+  return rand;
+};
 
 /** A line of the main list: a green heading, or a name with an optional green position tag. */
 export type ListEntry = { heading: string } | { name: string; tag?: string };
@@ -242,31 +272,7 @@ const drawSheet = async (details: GameDetails, entries: ListEntry[], goalies: Pl
   ]).catch(() => [null]);
   const canvas = newCanvas(W, H);
   const ctx = canvas.getContext('2d')!;
-  const rand = mulberry32(2215);
-
-  // Grey-green camo all round, with the dark olive panel on top.
-  const tile = camoTile('stone');
-  for (let y = 0; y < H; y += 240) for (let x = 0; x < W; x += 240) ctx.drawImage(tile, x, y, 240, 240);
-  ctx.fillStyle = '#27311e';
-  ctx.fillRect(PANEL.x, PANEL.y, PANEL.w, PANEL.h);
-  // Grunge: dark and light flecks across the panel.
-  for (let i = 0; i < 2600; i++) {
-    const x = PANEL.x + rand() * PANEL.w;
-    const y = PANEL.y + rand() * PANEL.h;
-    ctx.fillStyle = rand() < 0.6 ? 'rgba(10, 12, 8, 0.35)' : 'rgba(120, 135, 100, 0.12)';
-    ctx.fillRect(x, y, 1 + rand() * 3, 1 + rand() * 3);
-  }
-
-  chevrons(ctx, 14, 96, 1);
-  chevrons(ctx, W - 22, H - 70, -1);
-  slashes(ctx, 0, 520, 190, 250, 3);
-  slashes(ctx, 0, 300, 120, 140, 2);
-  slashes(ctx, W, 1150, W - 220, 1340, 3);
-  bulletHole(ctx, rand, W - 54, 88, 40);
-  bulletHole(ctx, rand, 952, 332, 34);
-  bulletHole(ctx, rand, 26, 604, 32);
-  bulletHole(ctx, rand, 118, 806, 30);
-  puck(ctx, 60, 1260);
+  const rand = drawFrame(ctx);
 
   // Title: big stencil word with a smaller serif stencil word under it.
   const [big, small] = sheetTitle(details.kind);
