@@ -2,6 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { loadDemo } from './lib/demo'
+
+// A link ending ?demo fills an empty phone with sample data to try the app with (never a phone with a roster).
+if (new URLSearchParams(location.search).has('demo')) loadDemo();
 
 // Offline support for the installed app. Skipped in development and when shown inside another page.
 if ('serviceWorker' in navigator && import.meta.env.PROD && window.top === window) {

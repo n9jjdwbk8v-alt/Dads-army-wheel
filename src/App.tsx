@@ -25,7 +25,8 @@ const TABS: Tab[] = ['roster', 'teams', 'fees', 'gameday'];
 
 // Links can open a tab (?tab=fees), as the Home Screen shortcuts do.
 const launch = new URLSearchParams(location.search);
-const launchTab = TABS.find(t => t === launch.get('tab'));
+// ?demo (sample data) opens on Game day.
+const launchTab = TABS.find(t => t === launch.get('tab')) ?? (launch.has('demo') ? 'gameday' : undefined);
 
 export default function App() {
   const [players, setPlayers] = usePersistentState<Player[]>('dads-army:players', []);

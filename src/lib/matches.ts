@@ -73,14 +73,17 @@ export const saveSquad = (matches: Match[], details: GameDetails, players: Playe
 export const updateMatch = (matches: Match[], id: string, update: (m: Match) => Match) =>
   matches.map(m => (m.id === id ? update(m) : m));
 
+/** When the next event happened: now, but always after the last one, so the log keeps its order. */
+const nextAt = (m: Match) => Math.max(Date.now(), ...m.goals.map(g => g.at + 1), ...m.penalties.map(p => p.at + 1));
+
 export const addGoal = (m: Match, goal: Omit<MatchGoal, 'id' | 'at' | 'period'>): Match => ({
   ...m,
-  goals: [...m.goals, { ...goal, id: newId(), at: Date.now(), period: m.period }]
+  goals: [...m.goals, { ...goal, id: newId(), at: nextAt(m), period: m.period }]
 });
 
 export const addPenalty = (m: Match, penalty: Omit<MatchPenalty, 'id' | 'at' | 'period'>): Match => ({
   ...m,
-  penalties: [...m.penalties, { ...penalty, id: newId(), at: Date.now(), period: m.period }]
+  penalties: [...m.penalties, { ...penalty, id: newId(), at: nextAt(m), period: m.period }]
 });
 
 /** Takes back whatever was added last, goal or penalty. */
