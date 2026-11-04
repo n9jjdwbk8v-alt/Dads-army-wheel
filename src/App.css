@@ -1130,6 +1130,440 @@
   color: var(--on-lime);
 }
 
+/* ---------- Game day sections and the Score section ---------- */
+
+/* A two- or three-way switch: Squad / Sheet / Score, Dads Army / opposition. */
+.segment {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: var(--fill);
+  border: 1px solid var(--line);
+}
+
+.segment button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.segment button.segment__on {
+  background: var(--lime);
+  color: var(--on-lime);
+}
+
+.segment--sections {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.gameday__next {
+  justify-self: center;
+  margin-top: 1rem;
+}
+
+.saved-note {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(200, 230, 107, 0.45);
+  border-radius: 16px;
+  background: var(--glass);
+}
+
+.saved-note > span {
+  flex: 1;
+  display: grid;
+}
+
+.score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  scroll-margin-top: 1rem;
+}
+
+.score__pick {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.score__earlier {
+  margin-top: 0.5rem;
+}
+
+.score__games {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.score-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 60px;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--fill);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.score-card--on {
+  border-color: var(--lime);
+}
+
+.score-card--new {
+  display: grid;
+  gap: 0.5rem;
+  cursor: default;
+}
+
+.score-card__body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.score-card__title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.score-card__result {
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.score__board {
+  display: grid;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.score__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.score__back {
+  text-decoration: none;
+}
+
+.score__squad {
+  min-height: 36px;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--lime);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.scoreboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scoreboard__side {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+}
+
+.scoreboard__name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scoreboard__name--us {
+  color: var(--lime);
+}
+
+.scoreboard__num {
+  font-family: var(--font-stencil);
+  font-size: 4.5rem;
+  line-height: 1;
+  color: #fff;
+}
+
+.scoreboard__num--them {
+  color: #c9ccbd;
+}
+
+.scoreboard__dash {
+  font-family: var(--font-stencil);
+  font-size: 1.8rem;
+  color: var(--muted);
+}
+
+.period-pick {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.period-pick .chip {
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+}
+
+.score__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.score__big {
+  min-height: 64px;
+  font-size: 1.1rem;
+}
+
+.score__big--them {
+  background: #2a2f25;
+  color: var(--ink);
+  border: 2px solid #6e7566;
+}
+
+.score__log {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.log__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid rgba(200, 230, 107, 0.08);
+}
+
+.log__period {
+  flex: none;
+  width: 2rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.log__row--us .log__period {
+  color: var(--lime);
+}
+
+.log__text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+
+.log__text strong {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log__score {
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--lime);
+}
+
+.score__end {
+  justify-self: center;
+}
+
+.form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.form .chips {
+  justify-content: flex-start;
+}
+
+.form .text-input--search {
+  margin-bottom: 0;
+}
+
+.form-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.form-head .panel__title {
+  font-size: 1.7rem;
+}
+
+.form .btn--whatsapp {
+  justify-self: center;
+}
+
+.form__time {
+  max-width: 220px;
+}
+
+.pick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.pick {
+  min-height: 48px;
+  padding: 0 0.75rem;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--fill);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pick--on {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--on-lime);
+}
+
+.number-input {
+  font-family: var(--font-stencil);
+  font-size: 1.5rem;
+  height: 52px;
+}
+
+.squad-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.squad-list__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 50px;
+  border-bottom: 1px solid rgba(200, 230, 107, 0.08);
+}
+
+.squad-list__pos {
+  flex: none;
+  width: 1.4rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--lime);
+}
+
+.squad-list__name {
+  flex: 1;
+  min-width: 0;
+}
+
+.squad-list__remove {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--danger);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.squad-list__undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.squad-list__pick {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 0.25rem;
+  border: 0;
+  border-bottom: 1px solid rgba(200, 230, 107, 0.08);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.squad-list__box {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--lime);
+  border-radius: 7px;
+  color: var(--on-lime);
+  font-weight: 800;
+}
+
+.squad-list__pick--on .squad-list__box {
+  background: var(--lime);
+}
+
 /* ---------- Fees ---------- */
 
 .fees .panel {

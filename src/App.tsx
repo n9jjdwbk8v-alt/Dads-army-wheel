@@ -13,6 +13,7 @@ import ChompLogo from './components/ChompLogo';
 import { usePhoneTurn } from './components/usePhoneTurn';
 import { NEW_GAME_DAY, type GameDayState } from './lib/gameDay';
 import { NEW_FEES, readFees, type FeesState } from './lib/fees';
+import { readMatches, type Match } from './lib/matches';
 import { NO_TEAMS, recordGame, todayKey, type GameRecord, type Player, type Teams } from './lib/teams';
 import type { Backup as BackupData } from './lib/backup';
 import { usePersistentState } from './lib/storage';
@@ -32,6 +33,7 @@ export default function App() {
   const [history, setHistory] = usePersistentState<GameRecord[]>('dads-army:history', []);
   const [gameDay, setGameDay] = usePersistentState<GameDayState>('dads-army:gameday', NEW_GAME_DAY);
   const [fees, setFees] = usePersistentState<FeesState>('dads-army:fees', NEW_FEES, readFees);
+  const [matches, setMatches] = usePersistentState<Match[]>('dads-army:matches', [], readMatches);
   // Sparks are placed by screen position, which doesn't match the page while it's turned against the phone.
   const turned = usePhoneTurn();
   const [tab, setTab] = useState<Tab>(() => launchTab ?? (teams.light.length ? 'teams' : 'roster'));
@@ -95,7 +97,14 @@ export default function App() {
         )}
         {tab === 'teams' && <TeamsView present={present} teams={teams} recent={recent} onSplit={split} />}
         {tab === 'gameday' && (
-          <GameDay players={players} setPlayers={setPlayers} gameDay={gameDay} setGameDay={setGameDay} />
+          <GameDay
+            players={players}
+            setPlayers={setPlayers}
+            gameDay={gameDay}
+            setGameDay={setGameDay}
+            matches={matches}
+            setMatches={setMatches}
+          />
         )}
         {tab === 'fees' && <Fees players={players} fees={fees} setFees={setFees} />}
       </main>
