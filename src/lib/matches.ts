@@ -21,6 +21,10 @@ export type Match = {
   period: Period;
   finished: boolean;
   playerOfMatch?: string;
+  /** A score sheet has been sent or saved. */
+  sheetSent?: boolean;
+  /** Squad has been cleared for the next game, so this game no longer belongs to Game day's details. */
+  detached?: boolean;
   saved: string;
 };
 
@@ -38,19 +42,31 @@ export const PERIODS: { value: Period; label: string; long: string }[] = [
 export const sameGame = (a: GameDetails, b: GameDetails) =>
   a.kind === b.kind && a.opponent.trim().toLowerCase() === b.opponent.trim().toLowerCase() && a.date === b.date;
 
+/** A game has started once anything is recorded or a score sheet has gone out. From then on it lives in Score. */
+export const isStarted = (m: Match) => m.goals.length > 0 || m.penalties.length > 0 || !!m.sheetSent || m.finished;
+
+/** The game Game day's details are planning now, if it's still tied to them. */
+export const gameFor = (matches: Match[], details: GameDetails) =>
+  matches.find(m => !m.detached && sameGame(m.details, details));
+
+/** Lets go of Game day's current game, so Squad can be cleared and the next game planned. */
+export const detach = (matches: Match[], details: GameDetails) =>
+  matches.map(m => (!m.detached && sameGame(m.details, details) ? { ...m, detached: true } : m));
+
 const newId = () => crypto.randomUUID();
 
 const squadFrom = (players: Player[]): MatchPlayer[] =>
   players.map(p => ({ id: p.id, name: p.name, goalie: positionOf(p) === 'G' }));
 
 /**
- * Saves the squad from a team sheet. Making the sheet again for the same game updates that game's squad and keeps
- * its score; a new game goes to the top of the list.
+ * Saves the squad from a team sheet. Making the sheet again for the same game updates that game's squad, until the
+ * game has started: after that its squad is changed only from Score. A new game goes to the top of the list.
  */
 export const saveSquad = (matches: Match[], details: GameDetails, players: Player[]): Match[] => {
   const squad = squadFrom(players);
   const saved = new Date().toISOString();
-  const existing = matches.find(m => sameGame(m.details, details));
+  const existing = gameFor(matches, details);
+  if (existing && isStarted(existing)) return matches;
   if (existing) {
     // Guests added on the Score section aren't on the team sheet, so they stay.
     const guests = existing.squad.filter(p => p.guest && !squad.some(s => s.id === p.id));
@@ -196,6 +212,8 @@ export const readMatches = (raw: unknown): Match[] | undefined => {
       period: isPeriod(m.period) ? m.period : 1,
       finished: m.finished === true,
       ...(m.playerOfMatch ? { playerOfMatch: str(m.playerOfMatch, 40) } : {}),
+      ...(m.sheetSent ? { sheetSent: true } : {}),
+      ...(m.detached ? { detached: true } : {}),
       saved: str(m.saved, 30)
     }));
 };

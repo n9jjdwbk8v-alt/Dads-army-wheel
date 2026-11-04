@@ -1291,6 +1291,18 @@
   display: grid;
 }
 
+.saved-note--stack {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.saved-note > .saved-note__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 .score {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

@@ -7,7 +7,8 @@ import {
   matchTitle,
   PERIODS,
   points,
-  sameGame,
+  gameFor,
+  isStarted,
   saveSquad,
   score,
   seenNumbers,
@@ -49,8 +50,10 @@ const nameHas = (name: string, query: string) => name.toLowerCase().includes(que
 
 /** Game day's Score section: pick a game whose squad was saved from its team sheet, then score it live. */
 export default function ScoreSection({ matches: all, setMatches, details, available, roster }: ScoreSectionProps) {
-  const current = all.find(m => sameGame(m.details, details));
-  const [pickedId, setPickedId] = useState<string | null>(current?.id ?? null);
+  const current = gameFor(all, details);
+  // Opens on the game being planned, or else a game still being played after Squad was cleared for the next one.
+  const ongoing = all.find(m => !m.finished && isStarted(m));
+  const [pickedId, setPickedId] = useState<string | null>(current?.id ?? ongoing?.id ?? null);
   const [view, setView] = useState<View>('live');
   const match = all.find(m => m.id === pickedId) ?? null;
   const top = useRef<HTMLDivElement>(null);
@@ -87,7 +90,7 @@ export default function ScoreSection({ matches: all, setMatches, details, availa
   const startCurrent = () => {
     const next = saveSquad(all, details, available);
     setMatches(() => next);
-    const started = next.find(m => sameGame(m.details, details));
+    const started = gameFor(next, details);
     if (started) open(started.id);
   };
 
@@ -161,6 +164,7 @@ export default function ScoreSection({ matches: all, setMatches, details, availa
         {view === 'period' && (
           <PeriodEnd
             match={match}
+            onChange={change}
             onBack={back}
             onNext={() => {
               change(m => ({ ...m, period: Math.min(4, m.period + 1) as Period }));
@@ -818,7 +822,15 @@ function AddPlayers({ match, roster, onCancel, onAdd }: AddPlayersProps) {
 
 // ---------- Sending the sheet ----------
 
-function SheetShare({ match, stage, label }: { match: Match; stage: Period | 'final'; label: string }) {
+type SheetShareProps = {
+  match: Match;
+  stage: Period | 'final';
+  label: string;
+  /** Called when the sheet is sent or saved, which marks the game as started. */
+  onSent: () => void;
+};
+
+function SheetShare({ match, stage, label, onSent }: SheetShareProps) {
   const sheet = toScoreSheet(match, stage);
   const key = JSON.stringify(sheet);
   const picture = useRendered(key, true, () => drawScoreSheet(sheet));
@@ -836,7 +848,10 @@ function SheetShare({ match, stage, label }: { match: Match; stage: Period | 'fi
         disabled={!ready}
         onClick={() => {
           const f = file();
-          if (f) shareOrDownload(f);
+          if (f) {
+            onSent();
+            shareOrDownload(f);
+          }
         }}
       >
         Send sheet to WhatsApp
@@ -846,7 +861,10 @@ function SheetShare({ match, stage, label }: { match: Match; stage: Period | 'fi
         disabled={!ready}
         onClick={() => {
           const f = file();
-          if (f) download(f);
+          if (f) {
+            onSent();
+            download(f);
+          }
         }}
       >
         Download image
@@ -855,7 +873,14 @@ function SheetShare({ match, stage, label }: { match: Match; stage: Period | 'fi
   );
 }
 
-function PeriodEnd({ match, onBack, onNext }: { match: Match; onBack: () => void; onNext: () => void }) {
+type PeriodEndProps = {
+  match: Match;
+  onChange: (update: (m: Match) => Match) => void;
+  onBack: () => void;
+  onNext: () => void;
+};
+
+function PeriodEnd({ match, onChange, onBack, onNext }: PeriodEndProps) {
   const { us, them } = score(match);
   const period = PERIODS.find(p => p.value === match.period)!;
   const next = PERIODS.find(p => p.value === match.period + 1);
@@ -865,7 +890,12 @@ function PeriodEnd({ match, onBack, onNext }: { match: Match; onBack: () => void
         {matchTitle(match.details)} · {us}–{them}
       </p>
       <h2 className="panel__title">End of {period.long}</h2>
-      <SheetShare match={match} stage={match.period} label={`Score sheet after the ${period.long}: ${us}–${them}`} />
+      <SheetShare
+        match={match}
+        stage={match.period}
+        label={`Score sheet after the ${period.long}: ${us}–${them}`}
+        onSent={() => onChange(m => ({ ...m, sheetSent: true }))}
+      />
       <div className="split__actions">
         {next && (
           <button className="btn btn--ghost" onClick={onNext}>
@@ -915,7 +945,12 @@ function FullTime({ match, onChange, onBack, onFinish }: FullTimeProps) {
           );
         })}
       </div>
-      <SheetShare match={match} stage="final" label={`Final score sheet: ${us}–${them}`} />
+      <SheetShare
+        match={match}
+        stage="final"
+        label={`Final score sheet: ${us}–${them}`}
+        onSent={() => onChange(m => ({ ...m, sheetSent: true }))}
+      />
       <div className="split__actions">
         <button className="btn btn--ghost" onClick={onBack}>
           Back to game

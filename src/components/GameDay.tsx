@@ -1,9 +1,10 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import SpringCheck from './reactbits/SpringCheck';
 import ScoreSection from './ScoreSection';
+import { useConfirmTap } from './useConfirmTap';
 import { useRendered } from './useRendered';
 import type { GameDayState } from '../lib/gameDay';
-import { saveSquad, type Match } from '../lib/matches';
+import { detach, gameFor, isStarted, matchTitle, saveSquad, score, type Match } from '../lib/matches';
 import { usePersistentState } from '../lib/storage';
 import {
   buildLineup,
@@ -166,21 +167,54 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay, matc
     setMatches(ms => saveSquad(ms, details, squad));
     setSavedKey(squadSaveKey);
   };
-  const savedNote =
-    savedKey === squadSaveKey ? (
-      <div className="saved-note" role="status">
+  // Once this game has started (something recorded, or a score sheet sent) it lives in Score, and Squad can be
+  // cleared to plan the next one without touching it.
+  const [armed, confirmTap] = useConfirmTap();
+  const game = gameFor(matches, details);
+  const started = !!game && isStarted(game);
+  const clearForNext = () => {
+    if (!confirmTap('clear')) return;
+    setMatches(ms => detach(ms, details));
+    setGameDay(g => ({ ...g, opponent: '', date: '', time: '', venue: '', available: [], manual: undefined }));
+    setSavedKey('');
+  };
+  const startedNote =
+    game && started ? (
+      <div className="saved-note saved-note--stack" role="status">
         <span>
-          <strong>Squad saved for Score</strong>
+          <strong>{matchTitle(game.details)} is in Score</strong>
           <span className="muted small">
-            {squad.length} player{squad.length === 1 ? '' : 's'} · {goalies.length} netminder
-            {goalies.length === 1 ? '' : 's'}
+            {game.finished ? 'Full time' : 'Being scored'} · {score(game).us}–{score(game).them}. Clearing Squad for the
+            next game leaves it there.
           </span>
         </span>
-        <button className="btn btn--ghost" onClick={() => showSection('score')}>
-          Score
-        </button>
+        <span className="saved-note__actions">
+          <button className="btn btn--ghost" onClick={() => showSection('score')}>
+            Score
+          </button>
+          <button className={armed === 'clear' ? 'btn btn--danger' : 'btn btn--primary'} onClick={clearForNext}>
+            {armed === 'clear' ? 'Tap again to clear' : 'Clear for next game'}
+          </button>
+        </span>
       </div>
     ) : null;
+
+  const savedNote = started ? (
+    startedNote
+  ) : savedKey === squadSaveKey ? (
+    <div className="saved-note" role="status">
+      <span>
+        <strong>Squad saved for Score</strong>
+        <span className="muted small">
+          {squad.length} player{squad.length === 1 ? '' : 's'} · {goalies.length} netminder
+          {goalies.length === 1 ? '' : 's'}
+        </span>
+      </span>
+      <button className="btn btn--ghost" onClick={() => showSection('score')}>
+        Score
+      </button>
+    </div>
+  ) : null;
 
   return (
     <section className="gameday">
@@ -207,6 +241,7 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay, matc
       <div key={section} className="gameday__body">
         {section === 'squad' && (
           <>
+            {startedNote}
             <div className="panel gameday__details">
               <div className="stamps" role="radiogroup" aria-label="Game or scrimmage">
                 {KINDS.map(k => (
