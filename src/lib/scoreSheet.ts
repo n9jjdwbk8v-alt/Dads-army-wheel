@@ -36,9 +36,8 @@ export type ScoreSheet = {
   stage: Period | 'final';
   goals: Goal[];
   penalties: Penalty[];
-  shots: { us: number; them: number };
-  /** Our netminders and the saves each made. */
-  netminders: { name: string; saves: number }[];
+  /** Our netminders' names. */
+  netminders: string[];
   /** Picked at full time. */
   playerOfMatch?: string;
 };
@@ -205,35 +204,17 @@ export const drawScoreSheet = async (sheet: ScoreSheet): Promise<Blob> => {
     }
   });
 
-  // Right column: netminders and saves, shots, then penalties.
+  // Right column: netminders, as on the team sheet, then penalties.
   tornLabel(ctx, rand, SIDE_X, 444, sheet.netminders.length > 1 ? 'NETMINDERS' : 'NETMINDER');
   let y = 514;
   ctx.letterSpacing = '1px';
-  (sheet.netminders.length ? sheet.netminders : [{ name: 'TO BE CONFIRMED', saves: -1 }]).slice(0, 2).forEach(n => {
-    ctx.fillStyle = OFF_WHITE;
-    ctx.font = `34px ${BLOCK}`;
-    ctx.fillText(fit(ctx, n.name.toUpperCase(), 340), SIDE_X, y);
-    if (n.saves >= 0) {
-      ctx.fillStyle = GREEN;
-      ctx.font = `28px ${BLOCK}`;
-      ctx.fillText(`${n.saves} SAVES`, SIDE_X, y + 36);
-    }
-    y += 84;
+  ctx.fillStyle = OFF_WHITE;
+  ctx.font = `34px ${BLOCK}`;
+  (sheet.netminders.length ? sheet.netminders : ['TO BE CONFIRMED']).slice(0, 3).forEach(name => {
+    ctx.fillText(fit(ctx, name.toUpperCase(), 340), SIDE_X, y);
+    y += 42;
   });
-
-  tornLabel(ctx, rand, SIDE_X, y + 28, 'SHOTS');
-  ctx.font = `44px ${BLOCK}`;
-  pieces(
-    ctx,
-    [
-      { text: String(sheet.shots.us), color: OFF_WHITE, font: `44px ${BLOCK}` },
-      { text: '  -  ', color: GREEN, font: `44px ${BLOCK}` },
-      { text: String(sheet.shots.them), color: STONE, font: `44px ${BLOCK}` }
-    ],
-    SIDE_X,
-    y + 104
-  );
-  y += 170;
+  y += 20;
 
   const pens = penalties.filter(p => p.period <= last);
   if (pens.length) {
