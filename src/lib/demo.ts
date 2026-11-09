@@ -62,9 +62,40 @@ export const loadDemo = () => {
     inPeriod(2, m => addGoal(m, { side: 'us', scorer: 'Joe Bloggs', assists: [] }));
     inPeriod(2, m => addPenalty(m, { side: 'us', who: 'Max Ray', minutes: 2, reason: 'Tripping' }));
 
+    // Some earlier scrimmages at full time, for the Leaders section.
+    let seed = 7;
+    const roll = (n: number) => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return Math.floor((seed / 233280) * n);
+    };
+    const skaters = available.filter(p => p.skill > 0);
+    const scrims: Match[] = [];
+    for (let w = 1; w <= 12; w++) {
+      const day = new Date();
+      day.setDate(day.getDate() - 7 * w);
+      const date = day.toISOString().slice(0, 10);
+      const sitOut = skaters[roll(skaters.length)].id;
+      const squad = available.filter(p => p.id !== sitOut);
+      let [s] = saveSquad([], { ...gameDay, kind: 'scrimmage', opponent: `Scrimmage ${13 - w}`, date }, squad);
+      const shooters = squad.filter(p => p.skill > 0);
+      // Better players score a bit more often.
+      const pick = () => {
+        const a = shooters[roll(shooters.length)];
+        const b = shooters[roll(shooters.length)];
+        return a.skill >= b.skill ? a : b;
+      };
+      for (let g = 0, goals = 2 + roll(5); g < goals; g++) {
+        const scorer = pick();
+        const helper = shooters.filter(p => p !== scorer)[roll(shooters.length - 1)];
+        s = addGoal(s, { side: 'us', scorer: scorer.name, assists: roll(4) ? [helper.name] : [] });
+      }
+      for (let g = 0, goals = roll(5); g < goals; g++) s = addGoal(s, { side: 'them', assists: [] });
+      scrims.push({ ...s, period: 3, finished: true, detached: true });
+    }
+
     localStorage.setItem('dads-army:players', JSON.stringify(players));
     localStorage.setItem('dads-army:gameday', JSON.stringify(gameDay));
-    localStorage.setItem('dads-army:matches', JSON.stringify([match]));
+    localStorage.setItem('dads-army:matches', JSON.stringify([match, ...scrims]));
     localStorage.setItem('dads-army:gameday-section', JSON.stringify('score'));
   } catch {
     // Storage blocked: the app just starts empty.

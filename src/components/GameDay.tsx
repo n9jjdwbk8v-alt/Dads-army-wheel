@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import SpringCheck from './reactbits/SpringCheck';
+import Leaders from './Leaders';
 import ScoreSection from './ScoreSection';
 import { useConfirmTap } from './useConfirmTap';
 import { useRendered } from './useRendered';
@@ -39,12 +40,13 @@ type GameDayProps = {
   setMatches: (update: (matches: Match[]) => Match[]) => void;
 };
 
-/** Game day is split into three: who's playing, the sheets to send, and keeping score. */
-type Section = 'squad' | 'sheet' | 'score';
+/** Game day is split into four: who's playing, the sheets to send, keeping score, and the scrimmage leaderboard. */
+type Section = 'squad' | 'sheet' | 'score' | 'leaders';
 const SECTIONS: { value: Section; label: string }[] = [
   { value: 'squad', label: 'Squad' },
   { value: 'sheet', label: 'Sheet' },
-  { value: 'score', label: 'Score' }
+  { value: 'score', label: 'Score' },
+  { value: 'leaders', label: 'Leaders' }
 ];
 
 const POSITIONS: { value: Position; label: string; title: string }[] = [
@@ -434,6 +436,8 @@ export default function GameDay({ players, setPlayers, gameDay, setGameDay, matc
             roster={players}
           />
         )}
+
+        {section === 'leaders' && <Leaders matches={matches} roster={players} />}
       </div>
     </section>
   );

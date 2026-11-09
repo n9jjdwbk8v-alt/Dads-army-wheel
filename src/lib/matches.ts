@@ -28,8 +28,10 @@ export type Match = {
   saved: string;
 };
 
-/** How many games are remembered. */
+/** How many games are remembered. Finished scrimmages are always kept, as they make up the leaderboard. */
 const KEEP = 20;
+const keepRecent = (matches: Match[]) =>
+  matches.filter((m, i) => i < KEEP || (m.details.kind === 'scrimmage' && m.finished));
 
 export const PERIODS: { value: Period; label: string; long: string }[] = [
   { value: 1, label: '1st', long: '1st period' },
@@ -83,7 +85,7 @@ export const saveSquad = (matches: Match[], details: GameDetails, players: Playe
     finished: false,
     saved
   };
-  return [match, ...matches].slice(0, KEEP);
+  return keepRecent([match, ...matches]);
 };
 
 export const updateMatch = (matches: Match[], id: string, update: (m: Match) => Match) =>

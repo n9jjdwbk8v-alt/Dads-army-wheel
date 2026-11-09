@@ -289,7 +289,6 @@
   }
 }
 
-
 /* ---------- Controls ---------- */
 
 .btn {
@@ -658,7 +657,9 @@
   background: var(--fill-2);
   outline: 3px solid transparent;
   outline-offset: 2px;
-  transition: outline-color 0.15s, transform 0.15s;
+  transition:
+    outline-color 0.15s,
+    transform 0.15s;
 }
 
 .thumb__img img {
@@ -1883,4 +1884,270 @@
   font-weight: 800;
   line-height: 1;
   vertical-align: middle;
+}
+
+/* ---------- Leaders: the scrimmage goals leaderboard ---------- */
+
+.segment--sections button {
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.leaders {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.leaders .panel__title {
+  margin: 0;
+}
+
+.leaders__head {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.leaders__head .graphic__label,
+.leaders__count {
+  margin: 0;
+}
+
+/* All time, then one chip per month, scrolling sideways once there are lots of months. */
+.leaders__periods {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -0.25rem;
+  padding: 0 0.25rem 2px;
+}
+
+.leaders__periods::-webkit-scrollbar {
+  display: none;
+}
+
+.leaders__periods .chip {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.board {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--fill);
+}
+
+.board__row {
+  display: grid;
+  grid-template-columns: 1.9rem minmax(0, 1fr) repeat(3, 3rem);
+  align-items: center;
+  gap: 2px;
+  min-height: 46px;
+  padding: 0 0.75rem;
+  border: 0;
+  border-top: 1px solid rgba(200, 230, 107, 0.08);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.board--player .board__row {
+  grid-template-columns: minmax(0, 1fr) repeat(3, 3rem);
+  cursor: default;
+}
+
+.board__row--head {
+  min-height: 40px;
+  border-top: 0;
+  cursor: default;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.board__row--head > span:nth-child(n + 3),
+.board--player .board__row--head > span:nth-child(n + 2) {
+  text-align: center;
+}
+
+.board__row--top {
+  background: rgba(200, 230, 107, 0.06);
+}
+
+.board__row--month {
+  min-height: 38px;
+  background: rgba(200, 230, 107, 0.08);
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+.board__sort {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.board__sort--on {
+  background: rgba(200, 230, 107, 0.16);
+  color: var(--lime);
+}
+
+.board__rank {
+  font-family: var(--font-stencil);
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.board__row--1 .board__rank {
+  color: #e4d841;
+}
+
+.board__row--2 .board__rank {
+  color: #c9ccbd;
+}
+
+.board__row--3 .board__rank {
+  color: #c98a4b;
+}
+
+.board__name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+
+.board__row--top .board__name {
+  font-weight: 700;
+}
+
+.board__game {
+  display: grid;
+  min-width: 0;
+  padding: 0.3rem 0;
+}
+
+.board__num {
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.board__num--goals {
+  color: var(--ink);
+}
+
+.board__num--assists {
+  color: var(--muted);
+}
+
+.board__num--points {
+  color: var(--lime);
+}
+
+.board__num--on {
+  color: #fff;
+}
+
+.board__row:not(.board__row--head):not(.board__row--month):active {
+  background: rgba(200, 230, 107, 0.12);
+}
+
+.leaders__note {
+  margin: 0;
+  text-align: center;
+}
+
+.leaders__back {
+  justify-self: start;
+}
+
+.leaders__player {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.leaders__player p {
+  margin: 0;
+}
+
+.leaders__badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--ink);
+  font-family: var(--font-stencil);
+  font-size: 1.4rem;
+}
+
+.leaders__badge--1 {
+  background: #e4d841;
+  color: #12180d;
+}
+
+.leaders__badge--2 {
+  background: #c9ccbd;
+  color: #12180d;
+}
+
+.leaders__badge--3 {
+  background: #c98a4b;
+  color: #12180d;
+}
+
+.leaders__totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.leaders__total {
+  display: grid;
+  justify-items: center;
+  padding: 0.6rem 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--fill);
+}
+
+.leaders__total strong {
+  font-family: var(--font-stencil);
+  font-size: 1.6rem;
+  font-weight: 400;
+}
+
+.leaders__total span {
+  font-family: var(--font-display);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
